@@ -1,0 +1,15 @@
+[package]
+name = "velocity-common"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared types, traits, and error types for the Velocity test framework"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
