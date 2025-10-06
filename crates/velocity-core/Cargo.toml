@@ -1,0 +1,20 @@
+[package]
+name = "velocity-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core engine for Velocity: YAML parser, validator, sync engine, executor"
+
+[dependencies]
+velocity-common = { path = "../velocity-common" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+tracing = { workspace = true }
+regex = { workspace = true }
+lru = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+async-trait = { workspace = true }
