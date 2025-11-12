@@ -1,0 +1,17 @@
+[package]
+name = "velocity-ios"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "iOS driver for Velocity: WDA HTTP client + xcrun simctl wrapper"
+
+[dependencies]
+velocity-common = { path = "../velocity-common" }
+tokio = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+quick-xml = { workspace = true }
+tracing = { workspace = true }
+base64 = { workspace = true }
+async-trait = { workspace = true }
