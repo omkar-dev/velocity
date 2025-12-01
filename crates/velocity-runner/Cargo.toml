@@ -1,0 +1,18 @@
+[package]
+name = "velocity-runner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Test runner for Velocity: scheduling, sharding, reporters"
+
+[dependencies]
+velocity-common = { path = "../velocity-common" }
+velocity-core = { path = "../velocity-core" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+quick-xml = { workspace = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+futures = { workspace = true }
