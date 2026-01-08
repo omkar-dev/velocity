@@ -1,0 +1,26 @@
+[package]
+name = "velocity-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CLI binary for Velocity mobile testing framework"
+
+[[bin]]
+name = "velocity"
+path = "src/main.rs"
+
+[dependencies]
+velocity-common = { path = "../crates/velocity-common" }
+velocity-android = { path = "../crates/velocity-android" }
+velocity-ios = { path = "../crates/velocity-ios" }
+velocity-core = { path = "../crates/velocity-core" }
+velocity-runner = { path = "../crates/velocity-runner" }
+velocity-mcp = { path = "../crates/velocity-mcp" }
+velocity-migrate = { path = "../crates/velocity-migrate" }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+colored = { workspace = true }
+serde_json = { workspace = true }
