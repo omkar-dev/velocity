@@ -1,0 +1,13 @@
+[package]
+name = "velocity-migrate"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Migration tools for Velocity: convert Maestro YAML to Velocity format"
+
+[dependencies]
+velocity-common = { path = "../velocity-common" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }
+anyhow = { workspace = true }
