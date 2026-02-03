@@ -1,0 +1,63 @@
+appId: com.example.myapp
+
+flows:
+  - id: login
+    steps:
+      - launchApp:
+          appId: com.example.myapp
+          clearState: true
+      - tap: { id: "email_field" }
+      - inputText:
+          selector: { id: "email_field" }
+          text: "test@example.com"
+      - tap: { id: "password_field" }
+      - inputText:
+          selector: { id: "password_field" }
+          text: "password123"
+      - tap: { id: "login_button" }
+
+  - id: navigate_to_profile
+    steps:
+      - tap: { id: "profile_tab" }
+      - assertVisible: { text: "My Profile" }
+
+  - id: navigate_to_settings
+    steps:
+      - tap: { id: "settings_icon" }
+      - assertVisible: { text: "Settings" }
+
+tests:
+  - name: "View profile after login"
+    tags: [smoke]
+    steps:
+      - runFlow: login
+      - runFlow: navigate_to_profile
+      - assertText:
+          selector: { id: "display_name" }
+          expected: "Test User"
+
+  - name: "Access settings from profile"
+    tags: [regression]
+    steps:
+      - runFlow: login
+      - runFlow: navigate_to_profile
+      - runFlow: navigate_to_settings
+      - assertVisible: { id: "notification_toggle" }
+
+  - name: "Scroll activity feed"
+    tags: [regression]
+    steps:
+      - runFlow: login
+      - tap: { id: "activity_tab" }
+      - scrollUntilVisible:
+          selector: { text: "Older Activity" }
+          direction: down
+          maxScrolls: 10
+
+  - name: "Swipe through carousel"
+    tags: [regression]
+    steps:
+      - runFlow: login
+      - swipe: { direction: left }
+      - swipe: { direction: left }
+      - assertVisible: { text: "Page 3" }

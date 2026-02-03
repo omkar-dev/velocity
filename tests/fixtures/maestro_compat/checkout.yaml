@@ -1,0 +1,19 @@
+appId: com.example.myapp
+---
+- launchApp:
+    appId: com.example.myapp
+- tapOn:
+    id: "cart_tab"
+- assertVisible:
+    text: "Shopping Cart"
+- scrollUntilVisible:
+    element:
+      text: "Checkout"
+    direction: DOWN
+    visibilityPercentage: 80
+- tapOn:
+    text: "Checkout"
+- runScript:
+    file: scripts/validate_total.js
+- assertVisible:
+    text: "Order Confirmed"

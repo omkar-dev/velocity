@@ -1,0 +1,279 @@
+# Velocity E2E Test Suite — Loyalty Mobile App
+appId: com.oolio.loyaty.sample.app
+
+config:
+  platform: ios
+  sync:
+    intervalMs: 300
+    stabilityCount: 3
+    timeoutMs: 15000
+  retry:
+    count: 1
+  artifacts:
+    onFailure: true
+    outputDir: ./velocity-results
+
+flows:
+  - id: launch_fresh
+    steps:
+      - launchApp:
+          appId: com.oolio.loyaty.sample.app
+          clearState: true
+      - wait: { ms: 2000 }
+
+  - id: login_existing_member
+    steps:
+      - assertVisible: { text: "Continue" }
+      - tap: { textContains: "phone number" }
+      - inputText:
+          selector: { textContains: "phone number" }
+          text: "${TEST_PHONE:-0400000000}"
+      - tap: { text: "Continue" }
+      - wait: { ms: 1500 }
+      - assertVisible: { text: "Enter Verification Code" }
+      - tap: { textContains: "•" }
+      - inputText:
+          selector: { textContains: "•" }
+          text: "${TEST_OTP:-1234}"
+      - wait: { ms: 2000 }
+
+  - id: navigate_to_wallet
+    steps:
+      - tap: { text: "Wallet" }
+      - wait: { ms: 1000 }
+
+  - id: navigate_to_activity
+    steps:
+      - tap: { text: "Activity" }
+      - wait: { ms: 1000 }
+
+  - id: navigate_to_profile
+    steps:
+      - tap: { text: "Profile" }
+      - wait: { ms: 1000 }
+
+  - id: navigate_to_home
+    steps:
+      - tap: { text: "Home" }
+      - wait: { ms: 1000 }
+
+tests:
+  # ── Auth Flow ──────────────────────────────────────────────
+
+  - name: login_screen_renders
+    tags: [auth, smoke]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - assertVisible: { textContains: "Login" }
+      - assertVisible: { text: "Continue" }
+
+  - name: login_phone_validation
+    tags: [auth]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - tap: { textContains: "phone number" }
+      - inputText:
+          selector: { textContains: "phone number" }
+          text: "123"
+      - assertVisible: { text: "Continue" }
+
+  - name: login_and_verify_otp
+    tags: [auth, smoke]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - assertVisible: { text: "Home" }
+
+  - name: verification_screen_shows_phone_hint
+    tags: [auth]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - tap: { textContains: "phone number" }
+      - inputText:
+          selector: { textContains: "phone number" }
+          text: "${TEST_PHONE:-0400000000}"
+      - tap: { text: "Continue" }
+      - wait: { ms: 1500 }
+      - assertVisible: { text: "Enter Verification Code" }
+      - assertVisible: { textContains: "ending in" }
+
+  - name: verification_resend_code
+    tags: [auth]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - tap: { textContains: "phone number" }
+      - inputText:
+          selector: { textContains: "phone number" }
+          text: "${TEST_PHONE:-0400000000}"
+      - tap: { text: "Continue" }
+      - wait: { ms: 1500 }
+      - assertVisible: { text: "Resend Code" }
+      - tap: { text: "Resend Code" }
+      - wait: { ms: 1000 }
+
+  # ── Dashboard ──────────────────────────────────────────────
+
+  - name: dashboard_shows_member_card
+    tags: [dashboard, smoke]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - assertVisible: { textContains: "Points" }
+
+  - name: dashboard_grid_tiles_visible
+    tags: [dashboard, smoke]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - assertVisible: { text: "My Rewards" }
+      - assertVisible: { text: "My Vouchers" }
+      - assertVisible: { text: "Order Online" }
+
+  - name: dashboard_scan_qr_tile
+    tags: [dashboard]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - scrollUntilVisible:
+          selector: { text: "Scan QR Code" }
+          direction: down
+          maxScrolls: 3
+      - tap: { text: "Scan QR Code" }
+      - wait: { ms: 1000 }
+      - assertVisible: { text: "Scan QR Code" }
+
+  - name: dashboard_my_rewards_navigates
+    tags: [dashboard]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - tap: { text: "My Rewards" }
+      - wait: { ms: 1000 }
+      - assertVisible: { text: "Rewards" }
+
+  - name: dashboard_my_vouchers_navigates
+    tags: [dashboard]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - tap: { text: "My Vouchers" }
+      - wait: { ms: 1000 }
+      - assertVisible: { text: "Vouchers" }
+
+  # ── Bottom Tab Navigation ──────────────────────────────────
+
+  - name: tab_navigation_all_tabs
+    tags: [navigation, smoke]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - runFlow: { flowId: "navigate_to_wallet" }
+      - assertVisible: { text: "Rewards" }
+      - runFlow: { flowId: "navigate_to_activity" }
+      - assertVisible: { text: "Loyalty" }
+      - runFlow: { flowId: "navigate_to_profile" }
+      - assertVisible: { text: "Logout" }
+      - runFlow: { flowId: "navigate_to_home" }
+      - assertVisible: { text: "My Rewards" }
+
+  # ── Wallet ─────────────────────────────────────────────────
+
+  - name: wallet_tab_switching
+    tags: [wallet]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - runFlow: { flowId: "navigate_to_wallet" }
+      - assertVisible: { text: "Rewards" }
+      - tap: { text: "Vouchers" }
+      - wait: { ms: 1000 }
+      - tap: { text: "Gift Cards" }
+      - wait: { ms: 1000 }
+      - tap: { text: "Rewards" }
+      - wait: { ms: 500 }
+
+  # ── Activity ───────────────────────────────────────────────
+
+  - name: activity_tab_switching
+    tags: [activity]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - runFlow: { flowId: "navigate_to_activity" }
+      - assertVisible: { text: "Loyalty" }
+      - tap: { text: "Orders" }
+      - wait: { ms: 1000 }
+      - tap: { text: "Loyalty" }
+      - wait: { ms: 500 }
+
+  # ── Profile ────────────────────────────────────────────────
+
+  - name: profile_shows_logout
+    tags: [profile, smoke]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - runFlow: { flowId: "navigate_to_profile" }
+      - scrollUntilVisible:
+          selector: { text: "Logout" }
+          direction: down
+          maxScrolls: 5
+      - assertVisible: { text: "Logout" }
+
+  - name: profile_shows_cancel_membership
+    tags: [profile]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - runFlow: { flowId: "navigate_to_profile" }
+      - scrollUntilVisible:
+          selector: { text: "Cancel Membership" }
+          direction: down
+          maxScrolls: 5
+      - assertVisible: { text: "Cancel Membership" }
+
+  # ── Locations ──────────────────────────────────────────────
+
+  - name: locations_screen_loads
+    tags: [ordering]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - scrollUntilVisible:
+          selector: { text: "Order Online" }
+          direction: down
+          maxScrolls: 3
+      - tap: { text: "Order Online" }
+      - wait: { ms: 2000 }
+      - assertVisible: { text: "Locations" }
+
+  # ── Logout ─────────────────────────────────────────────────
+
+  - name: logout_returns_to_login
+    tags: [auth, smoke]
+    steps:
+      - runFlow: { flowId: "launch_fresh" }
+      - runFlow: { flowId: "login_existing_member" }
+      - wait: { ms: 2000 }
+      - runFlow: { flowId: "navigate_to_profile" }
+      - scrollUntilVisible:
+          selector: { text: "Logout" }
+          direction: down
+          maxScrolls: 5
+      - tap: { text: "Logout" }
+      - wait: { ms: 500 }
+      # Confirm logout alert
+      - tap: { text: "Logout" }
+      - wait: { ms: 2000 }
+      - assertVisible: { textContains: "Login" }

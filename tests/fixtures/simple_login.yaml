@@ -1,0 +1,48 @@
+appId: com.example.myapp
+
+config:
+  platform: ios
+  sync:
+    interval_ms: 200
+    stability_count: 3
+    timeout_ms: 10000
+  retry:
+    count: 1
+  artifacts:
+    on_failure: true
+    output_dir: ./velocity-results
+
+flows:
+  - id: login
+    steps:
+      - tap: { id: "email_field" }
+      - inputText:
+          selector: { id: "email_field" }
+          text: "${EMAIL:-test@example.com}"
+      - tap: { id: "password_field" }
+      - inputText:
+          selector: { id: "password_field" }
+          text: "${PASSWORD:-password123}"
+      - tap: { id: "login_button" }
+      - assertVisible: { text: "Welcome" }
+
+tests:
+  - name: "Login with valid credentials"
+    tags: [smoke, auth]
+    isolated: true
+    steps:
+      - launchApp:
+          appId: com.example.myapp
+          clearState: true
+      - runFlow: login
+      - assertVisible: { id: "dashboard" }
+
+  - name: "Navigate to profile"
+    tags: [regression]
+    steps:
+      - runFlow: login
+      - tap: { id: "profile_tab" }
+      - assertVisible: { text: "My Profile" }
+      - assertText:
+          selector: { id: "username" }
+          expected: "Test User"

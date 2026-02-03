@@ -1,0 +1,54 @@
+appId: com.example.myapp
+
+config:
+  retry:
+    count: 0
+
+tests:
+  - name: "Test A"
+    tags: [smoke]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - assertVisible: { id: "home" }
+
+  - name: "Test B"
+    tags: [regression]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - tap: { id: "btn_b" }
+
+  - name: "Test C"
+    tags: [smoke, regression]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - tap: { id: "btn_c" }
+
+  - name: "Test D"
+    tags: [regression]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - tap: { id: "btn_d" }
+
+  - name: "Test E"
+    tags: [smoke]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - tap: { id: "btn_e" }
+
+  - name: "Test F"
+    tags: [regression]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - tap: { id: "btn_f" }
+
+  - name: "Test G"
+    tags: [smoke]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - tap: { id: "btn_g" }
+
+  - name: "Test H"
+    tags: [regression]
+    steps:
+      - launchApp: { appId: com.example.myapp, clearState: true }
+      - tap: { id: "btn_h" }
