@@ -1,0 +1,10 @@
+.env
+/target
+# Cargo.lock is included for binaries
+*.swp
+*.swo
+*~
+.DS_Store
+.idea/
+.vscode/
+*.log
