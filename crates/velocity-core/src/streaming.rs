@@ -58,8 +58,8 @@ pub fn parse_headers(yaml: &str) -> Result<Vec<TestHeader>> {
 
         if let Some(ref mut header) = current_header {
             // Detect tags line
-            if trimmed.starts_with("tags:") {
-                let tag_part = &trimmed["tags:".len()..].trim();
+            if let Some(stripped) = trimmed.strip_prefix("tags:") {
+                let tag_part = stripped.trim();
                 if tag_part.starts_with('[') && tag_part.ends_with(']') {
                     let inner = &tag_part[1..tag_part.len() - 1];
                     header.tags = inner
