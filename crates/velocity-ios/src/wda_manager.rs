@@ -22,11 +22,7 @@ impl WdaManager {
     /// Ensure a healthy WDA session exists for the given device and bundle.
     /// If a session already exists and is healthy, it is reused. Otherwise a new
     /// session is created.
-    pub async fn ensure_session(
-        &mut self,
-        device_id: &str,
-        bundle_id: &str,
-    ) -> Result<()> {
+    pub async fn ensure_session(&mut self, device_id: &str, bundle_id: &str) -> Result<()> {
         // If we have a session for the same device, check if it's still alive
         if self.wda_client.session_id().is_some() {
             if self.device_id.as_deref() == Some(device_id) {
@@ -96,10 +92,7 @@ impl WdaManager {
     ) -> Result<()> {
         debug!(
             device_id,
-            test_name,
-            attempt,
-            max_attempts,
-            "attempting WDA session recovery"
+            test_name, attempt, max_attempts, "attempting WDA session recovery"
         );
 
         // Clean up old session state

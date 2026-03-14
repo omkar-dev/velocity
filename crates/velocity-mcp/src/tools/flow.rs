@@ -5,9 +5,7 @@ use velocity_common::{PlatformDriver, Result, TestSuite, VelocityError};
 use velocity_core::{parse_suite, TestExecutor};
 
 fn load_suite(config_path: &Option<String>) -> Result<TestSuite> {
-    let path = config_path
-        .as_deref()
-        .unwrap_or("velocity.yaml");
+    let path = config_path.as_deref().unwrap_or("velocity.yaml");
     parse_suite(path)
 }
 
@@ -122,9 +120,7 @@ pub async fn run_test(
         .tests
         .iter()
         .find(|t| t.name == test_name)
-        .ok_or_else(|| {
-            VelocityError::Config(format!("Test '{test_name}' not found in suite"))
-        })?;
+        .ok_or_else(|| VelocityError::Config(format!("Test '{test_name}' not found in suite")))?;
 
     let app_id = &suite.app_id;
     let mut executor = TestExecutor::new(driver.as_ref(), suite.config.clone());

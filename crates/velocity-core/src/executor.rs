@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use velocity_common::{
-    Action, Direction, PlatformDriver, Result, Step, StepResult, StepStatus, SuiteConfig,
-    TestCase, TestResult, TestStatus, VelocityError,
+    Action, Direction, PlatformDriver, Result, Step, StepResult, StepStatus, SuiteConfig, TestCase,
+    TestResult, TestStatus, VelocityError,
 };
 
 use crate::selector::SelectorEngine;
@@ -70,8 +70,7 @@ impl<'a> TestExecutor<'a> {
 
                     // Take failure screenshot if configured
                     let screenshot = if self.config.artifacts.on_failure {
-                        self.take_failure_screenshot(device_id, &test.name, i)
-                            .await
+                        self.take_failure_screenshot(device_id, &test.name, i).await
                     } else {
                         None
                     };
@@ -134,19 +133,14 @@ impl<'a> TestExecutor<'a> {
         let name = action_name(&step.action);
 
         // Pre-action sync (skip for wait and screenshot actions)
-        let skip_sync = matches!(
-            step.action,
-            Action::Wait { .. } | Action::Screenshot { .. }
-        );
+        let skip_sync = matches!(step.action, Action::Wait { .. } | Action::Screenshot { .. });
         if !skip_sync {
             self.sync_engine
                 .wait_for_idle(self.driver, device_id)
                 .await?;
         }
 
-        let result = self
-            .execute_action(&step.action, device_id, app_id)
-            .await;
+        let result = self.execute_action(&step.action, device_id, app_id).await;
 
         // Post-action sync for actions that modify UI state
         let mutating = matches!(
@@ -168,10 +162,7 @@ impl<'a> TestExecutor<'a> {
                 if mutating {
                     self.selector_engine.invalidate_cache();
                     // Best-effort post-action sync; ignore timeout since the UI may still be settling
-                    let _ = self
-                        .sync_engine
-                        .wait_for_idle(self.driver, device_id)
-                        .await;
+                    let _ = self.sync_engine.wait_for_idle(self.driver, device_id).await;
                 }
                 Ok(StepResult {
                     step_index,
@@ -217,9 +208,7 @@ impl<'a> TestExecutor<'a> {
                 } else {
                     override_id
                 };
-                self.driver
-                    .launch_app(device_id, id, *clear_state)
-                    .await
+                self.driver.launch_app(device_id, id, *clear_state).await
             }
             Action::StopApp {
                 app_id: override_id,
@@ -254,18 +243,14 @@ impl<'a> TestExecutor<'a> {
                     .find_element(self.driver, device_id, selector)
                     .await?;
                 let ms = duration_ms.unwrap_or(1000);
-                self.driver
-                    .long_press(device_id, &element, ms)
-                    .await
+                self.driver.long_press(device_id, &element, ms).await
             }
             Action::InputText { selector, text } => {
                 let element = self
                     .selector_engine
                     .find_element(self.driver, device_id, selector)
                     .await?;
-                self.driver
-                    .input_text(device_id, &element, text)
-                    .await
+                self.driver.input_text(device_id, &element, text).await
             }
             Action::ClearText { selector } => {
                 let element = self
@@ -279,10 +264,7 @@ impl<'a> TestExecutor<'a> {
                     .selector_engine
                     .find_element(self.driver, device_id, selector)
                     .await?;
-                let visible = self
-                    .driver
-                    .is_element_visible(device_id, &element)
-                    .await?;
+                let visible = self.driver.is_element_visible(device_id, &element).await?;
                 if !visible {
                     return Err(VelocityError::AssertionFailed {
                         expected: "visible".to_string(),
@@ -301,10 +283,7 @@ impl<'a> TestExecutor<'a> {
                 match result {
                     Err(_) => Ok(()), // Element not found = not visible, pass
                     Ok(element) => {
-                        let visible = self
-                            .driver
-                            .is_element_visible(device_id, &element)
-                            .await?;
+                        let visible = self.driver.is_element_visible(device_id, &element).await?;
                         if visible {
                             return Err(VelocityError::AssertionFailed {
                                 expected: "not visible".to_string(),
@@ -322,10 +301,7 @@ impl<'a> TestExecutor<'a> {
                     .selector_engine
                     .find_element(self.driver, device_id, selector)
                     .await?;
-                let actual = self
-                    .driver
-                    .get_element_text(device_id, &element)
-                    .await?;
+                let actual = self.driver.get_element_text(device_id, &element).await?;
                 if actual != *expected {
                     return Err(VelocityError::AssertionFailed {
                         expected: expected.clone(),
@@ -359,10 +335,7 @@ impl<'a> TestExecutor<'a> {
                     }
                     self.selector_engine.invalidate_cache();
                     self.driver.swipe(device_id, *direction).await?;
-                    let _ = self
-                        .sync_engine
-                        .wait_for_idle(self.driver, device_id)
-                        .await;
+                    let _ = self.sync_engine.wait_for_idle(self.driver, device_id).await;
                 }
                 Err(VelocityError::ElementNotFound {
                     selector: format!("{selector}"),
@@ -377,15 +350,11 @@ impl<'a> TestExecutor<'a> {
                 to,
             } => {
                 if let (Some(from), Some(to)) = (from, to) {
-                    self.driver
-                        .swipe_coords(device_id, *from, *to)
-                        .await
+                    self.driver.swipe_coords(device_id, *from, *to).await
                 } else if let Some(dir) = direction {
                     self.driver.swipe(device_id, *dir).await
                 } else {
-                    self.driver
-                        .swipe(device_id, Direction::Down)
-                        .await
+                    self.driver.swipe(device_id, Direction::Down).await
                 }
             }
             Action::Screenshot { filename } => {
@@ -399,9 +368,7 @@ impl<'a> TestExecutor<'a> {
                 let _ = std::fs::write(&path, &data);
                 Ok(())
             }
-            Action::PressKey { key } => {
-                self.driver.press_key(device_id, key.clone()).await
-            }
+            Action::PressKey { key } => self.driver.press_key(device_id, key.clone()).await,
             Action::Wait { ms } => {
                 tokio::time::sleep(Duration::from_millis(*ms)).await;
                 Ok(())

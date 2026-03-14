@@ -3,10 +3,7 @@ use std::collections::HashMap;
 use regex::Regex;
 use velocity_common::{Action, Result, Selector, TestSuite, VelocityError};
 
-pub fn interpolate(
-    input: &str,
-    overrides: &HashMap<String, String>,
-) -> Result<String> {
+pub fn interpolate(input: &str, overrides: &HashMap<String, String>) -> Result<String> {
     let re = Regex::new(r"\$\{([^}]+)\}").unwrap();
     let mut missing_vars = Vec::new();
     let mut result = input.to_string();
@@ -34,9 +31,7 @@ pub fn interpolate(
     }
 
     if !missing_vars.is_empty() {
-        return Err(VelocityError::MissingEnvVars {
-            vars: missing_vars,
-        });
+        return Err(VelocityError::MissingEnvVars { vars: missing_vars });
     }
 
     Ok(result)
@@ -85,10 +80,7 @@ fn lookup_var(name: &str, overrides: &HashMap<String, String>) -> Option<String>
         .or_else(|| std::env::var(name).ok())
 }
 
-pub fn interpolate_suite(
-    suite: &mut TestSuite,
-    overrides: &HashMap<String, String>,
-) -> Result<()> {
+pub fn interpolate_suite(suite: &mut TestSuite, overrides: &HashMap<String, String>) -> Result<()> {
     suite.app_id = interpolate(&suite.app_id, overrides)?;
 
     for flow in &mut suite.flows {
@@ -106,10 +98,7 @@ pub fn interpolate_suite(
     Ok(())
 }
 
-fn interpolate_action(
-    action: &mut Action,
-    overrides: &HashMap<String, String>,
-) -> Result<()> {
+fn interpolate_action(action: &mut Action, overrides: &HashMap<String, String>) -> Result<()> {
     match action {
         Action::LaunchApp { app_id, .. } => {
             *app_id = interpolate(app_id, overrides)?;
@@ -294,7 +283,7 @@ mod tests {
 
     #[test]
     fn interpolate_suite_step_text() {
-        use velocity_common::{SuiteConfig, Step, TestCase};
+        use velocity_common::{Step, SuiteConfig, TestCase};
 
         let ovr = overrides(&[("USERNAME", "testuser")]);
         let mut suite = TestSuite {

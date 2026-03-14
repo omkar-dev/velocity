@@ -106,7 +106,11 @@ pub async fn execute(command: DeviceCommand) -> anyhow::Result<i32> {
             println!("{} Booting device {}...", "=>".cyan().bold(), name.bold());
             let driver = create_driver(p);
             driver.boot_device(&name).await?;
-            println!("{} Device {} is now booted", "=>".green().bold(), name.bold());
+            println!(
+                "{} Device {} is now booted",
+                "=>".green().bold(),
+                name.bold()
+            );
             Ok(0)
         }
 

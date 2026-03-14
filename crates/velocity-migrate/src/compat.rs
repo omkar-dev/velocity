@@ -73,7 +73,6 @@ impl Default for MigrationReport {
 }
 
 pub fn generate_report_json(report: &MigrationReport) -> String {
-    serde_json::to_string_pretty(report).unwrap_or_else(|e| {
-        format!("{{\"error\": \"Failed to serialize report: {e}\"}}")
-    })
+    serde_json::to_string_pretty(report)
+        .unwrap_or_else(|e| format!("{{\"error\": \"Failed to serialize report: {e}\"}}"))
 }

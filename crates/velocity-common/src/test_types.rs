@@ -29,7 +29,7 @@ pub struct TestCase {
 }
 
 /// Sync engine mode selection.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum SyncMode {
     /// v1 polling-based sync (default).
@@ -37,13 +37,8 @@ pub enum SyncMode {
     /// v2 native probe sync (requires probe embedded in app).
     Native,
     /// Try native first, fallback to polling if probe unavailable.
+    #[default]
     Auto,
-}
-
-impl Default for SyncMode {
-    fn default() -> Self {
-        Self::Auto
-    }
 }
 
 /// Sync engine configuration.
@@ -106,16 +101,10 @@ impl Default for SyncConfig {
 }
 
 /// Retry configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RetryConfig {
     #[serde(default)]
     pub count: u32,
-}
-
-impl Default for RetryConfig {
-    fn default() -> Self {
-        Self { count: 0 }
-    }
 }
 
 /// Artifact collection configuration.
@@ -145,7 +134,7 @@ impl Default for ArtifactsConfig {
 }
 
 /// Suite-level configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SuiteConfig {
     #[serde(default)]
     pub platform: Option<Platform>,
@@ -155,17 +144,6 @@ pub struct SuiteConfig {
     pub retry: RetryConfig,
     #[serde(default)]
     pub artifacts: ArtifactsConfig,
-}
-
-impl Default for SuiteConfig {
-    fn default() -> Self {
-        Self {
-            platform: None,
-            sync: SyncConfig::default(),
-            retry: RetryConfig::default(),
-            artifacts: ArtifactsConfig::default(),
-        }
-    }
 }
 
 /// A complete test suite parsed from a velocity.yaml file.

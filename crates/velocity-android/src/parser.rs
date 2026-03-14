@@ -66,14 +66,13 @@ pub fn parse_hierarchy_v2(xml: &str) -> Result<Element> {
         buf.clear();
     }
 
-    stack.into_iter().next().ok_or_else(|| {
-        VelocityError::Config("Empty hierarchy XML".to_string())
-    })
+    stack
+        .into_iter()
+        .next()
+        .ok_or_else(|| VelocityError::Config("Empty hierarchy XML".to_string()))
 }
 
-fn parse_node_attributes_from_bytes(
-    e: &quick_xml::events::BytesStart,
-) -> Result<Element> {
+fn parse_node_attributes_from_bytes(e: &quick_xml::events::BytesStart) -> Result<Element> {
     let mut text = None;
     let mut resource_id = String::new();
     let mut content_desc = None;
@@ -110,11 +109,7 @@ fn parse_node_attributes_from_bytes(
     let visible = !bounds.is_empty();
 
     // Simplify class name: "android.widget.Button" -> "Button"
-    let element_type = class
-        .rsplit('.')
-        .next()
-        .unwrap_or(&class)
-        .to_string();
+    let element_type = class.rsplit('.').next().unwrap_or(&class).to_string();
 
     let _ = clickable; // reserved for future use
 

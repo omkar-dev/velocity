@@ -8,9 +8,8 @@ pub fn write_json(result: &SuiteResult, path: &str) -> Result<()> {
         })?;
     }
 
-    let json = serde_json::to_string_pretty(result).map_err(|e| {
-        VelocityError::Config(format!("failed to serialize suite result: {e}"))
-    })?;
+    let json = serde_json::to_string_pretty(result)
+        .map_err(|e| VelocityError::Config(format!("failed to serialize suite result: {e}")))?;
 
     std::fs::write(path, json).map_err(|e| {
         VelocityError::Config(format!("failed to write JSON report at {path}: {e}"))

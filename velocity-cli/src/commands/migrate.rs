@@ -60,9 +60,7 @@ pub fn execute(command: MigrateCommand) -> anyhow::Result<i32> {
                 };
                 println!(
                     "  {icon} {} ({} steps migrated, {} skipped)",
-                    result.source_file,
-                    result.steps_migrated,
-                    result.steps_skipped
+                    result.source_file, result.steps_migrated, result.steps_skipped
                 );
 
                 for issue in &result.issues {

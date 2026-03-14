@@ -34,12 +34,14 @@ impl ImpactMapping {
     /// Load impact mapping from a YAML file.
     pub fn load(path: &Path) -> Result<Self> {
         let content = std::fs::read_to_string(path).map_err(|e| {
-            VelocityError::Config(format!("Failed to read impact mapping at {}: {e}", path.display()))
+            VelocityError::Config(format!(
+                "Failed to read impact mapping at {}: {e}",
+                path.display()
+            ))
         })?;
 
-        serde_yaml::from_str(&content).map_err(|e| {
-            VelocityError::Config(format!("Failed to parse impact mapping: {e}"))
-        })
+        serde_yaml::from_str(&content)
+            .map_err(|e| VelocityError::Config(format!("Failed to parse impact mapping: {e}")))
     }
 
     /// Create an empty mapping.
@@ -78,17 +80,17 @@ impl ImpactAnalyzer {
     /// Get the list of files changed since the base ref.
     pub fn changed_files(&self) -> Result<Vec<String>> {
         let output = Command::new("git")
-            .args(["diff", "--name-only", &format!("{}..HEAD", self.config.base_ref)])
+            .args([
+                "diff",
+                "--name-only",
+                &format!("{}..HEAD", self.config.base_ref),
+            ])
             .output()
-            .map_err(|e| {
-                VelocityError::Config(format!("Failed to run git diff: {e}"))
-            })?;
+            .map_err(|e| VelocityError::Config(format!("Failed to run git diff: {e}")))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(VelocityError::Config(format!(
-                "git diff failed: {stderr}"
-            )));
+            return Err(VelocityError::Config(format!("git diff failed: {stderr}")));
         }
 
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -118,7 +120,10 @@ impl ImpactAnalyzer {
 
         let changed_files = self.changed_files()?;
         if changed_files.is_empty() {
-            info!("no files changed since {}, skipping all tests", self.config.base_ref);
+            info!(
+                "no files changed since {}, skipping all tests",
+                self.config.base_ref
+            );
             return Ok(Some(Vec::new()));
         }
 
@@ -278,14 +283,26 @@ mod tests {
 
     #[test]
     fn test_file_matches_wildcard() {
-        assert!(file_matches_pattern("src/screens/Login.tsx", "src/screens/*.tsx"));
-        assert!(!file_matches_pattern("src/screens/Login.ts", "src/screens/*.tsx"));
+        assert!(file_matches_pattern(
+            "src/screens/Login.tsx",
+            "src/screens/*.tsx"
+        ));
+        assert!(!file_matches_pattern(
+            "src/screens/Login.ts",
+            "src/screens/*.tsx"
+        ));
     }
 
     #[test]
     fn test_file_matches_double_star() {
-        assert!(file_matches_pattern("src/screens/Login.tsx", "src/**/*.tsx"));
-        assert!(file_matches_pattern("src/deep/nested/File.tsx", "src/**/*.tsx"));
+        assert!(file_matches_pattern(
+            "src/screens/Login.tsx",
+            "src/**/*.tsx"
+        ));
+        assert!(file_matches_pattern(
+            "src/deep/nested/File.tsx",
+            "src/**/*.tsx"
+        ));
     }
 
     #[test]
@@ -297,11 +314,17 @@ mod tests {
     fn test_reverse_index() {
         let mapping = ImpactMapping {
             flows: HashMap::from([
-                ("login_test".to_string(), vec!["src/screens/Login.tsx".to_string()]),
-                ("checkout_test".to_string(), vec![
-                    "src/screens/Login.tsx".to_string(),
-                    "src/api/cart.ts".to_string(),
-                ]),
+                (
+                    "login_test".to_string(),
+                    vec!["src/screens/Login.tsx".to_string()],
+                ),
+                (
+                    "checkout_test".to_string(),
+                    vec![
+                        "src/screens/Login.tsx".to_string(),
+                        "src/api/cart.ts".to_string(),
+                    ],
+                ),
             ]),
         };
 

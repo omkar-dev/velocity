@@ -79,11 +79,7 @@ async fn run_command(cli: Cli) -> anyhow::Result<i32> {
         Command::Mcp(args) => mcp::execute(args).await,
         Command::Validate(args) => validate::execute(args),
         Command::Version => {
-            println!(
-                "{} {}",
-                "velocity".bold(),
-                env!("CARGO_PKG_VERSION")
-            );
+            println!("{} {}", "velocity".bold(), env!("CARGO_PKG_VERSION"));
             Ok(0)
         }
     }

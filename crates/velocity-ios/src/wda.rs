@@ -92,9 +92,10 @@ impl WdaClient {
     }
 
     fn session_url(&self) -> Result<String> {
-        let sid = self.session_id.as_deref().ok_or_else(|| {
-            VelocityError::Config("No active WDA session".to_string())
-        })?;
+        let sid = self
+            .session_id
+            .as_deref()
+            .ok_or_else(|| VelocityError::Config("No active WDA session".to_string()))?;
         Ok(format!("{}/session/{}", self.base_url, sid))
     }
 
@@ -120,9 +121,13 @@ impl WdaClient {
 
         debug!(bundle_id, "creating WDA session");
 
-        let resp = self.client.post(&url).json(&payload).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA session request failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA session request failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -143,9 +148,7 @@ impl WdaClient {
             .or_else(|| body.get("sessionId"))
             .and_then(|v| v.as_str())
             .ok_or_else(|| {
-                VelocityError::Config(format!(
-                    "WDA session response missing sessionId: {body}"
-                ))
+                VelocityError::Config(format!("WDA session response missing sessionId: {body}"))
             })?
             .to_string();
 
@@ -159,9 +162,12 @@ impl WdaClient {
         let url = self.session_url()?;
         debug!("deleting WDA session");
 
-        let resp = self.client.delete(&url).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA delete session failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .delete(&url)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA delete session failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or(json!({}));
@@ -182,9 +188,13 @@ impl WdaClient {
 
         debug!(using, value, "WDA find element");
 
-        let resp = self.client.post(&url).json(&payload).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA find element request failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA find element request failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -211,9 +221,13 @@ impl WdaClient {
 
         debug!(using, value, "WDA find elements");
 
-        let resp = self.client.post(&url).json(&payload).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA find elements request failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA find elements request failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -246,9 +260,13 @@ impl WdaClient {
         let url = format!("{}/element/{}/click", self.session_url()?, element_id);
         debug!(element_id, "WDA click");
 
-        let resp = self.client.post(&url).json(&json!({})).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA click failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&json!({}))
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA click failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or(json!({}));
@@ -268,9 +286,13 @@ impl WdaClient {
 
         debug!(element_id, text, "WDA send keys");
 
-        let resp = self.client.post(&url).json(&payload).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA send keys failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA send keys failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or(json!({}));
@@ -288,9 +310,13 @@ impl WdaClient {
         let url = format!("{}/element/{}/clear", self.session_url()?, element_id);
         debug!(element_id, "WDA clear");
 
-        let resp = self.client.post(&url).json(&json!({})).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA clear failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&json!({}))
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA clear failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or(json!({}));
@@ -308,9 +334,12 @@ impl WdaClient {
         let url = format!("{}/element/{}/text", self.session_url()?, element_id);
         debug!(element_id, "WDA get text");
 
-        let resp = self.client.get(&url).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA get text failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA get text failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -333,9 +362,12 @@ impl WdaClient {
         let url = format!("{}/element/{}/displayed", self.session_url()?, element_id);
         debug!(element_id, "WDA is displayed");
 
-        let resp = self.client.get(&url).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA is_displayed failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA is_displayed failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -388,9 +420,12 @@ impl WdaClient {
         let url = format!("{}/source", self.base_url);
         debug!("WDA get source (fresh)");
 
-        let resp = self.client.get(&url).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA get source failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA get source failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -413,9 +448,12 @@ impl WdaClient {
         let url = format!("{}/screenshot", self.base_url);
         debug!("WDA screenshot");
 
-        let resp = self.client.get(&url).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA screenshot failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA screenshot failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -448,9 +486,12 @@ impl WdaClient {
         let url = format!("{}/window/size", self.session_url()?);
         debug!("WDA get screen size");
 
-        let resp = self.client.get(&url).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA get screen size failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA get screen size failed: {e}")))?;
 
         let status = resp.status();
         let body: Value = resp.json().await.map_err(|e| {
@@ -465,12 +506,8 @@ impl WdaClient {
             )));
         }
 
-        let width = body["value"]["width"]
-            .as_i64()
-            .unwrap_or(390) as i32;
-        let height = body["value"]["height"]
-            .as_i64()
-            .unwrap_or(844) as i32;
+        let width = body["value"]["width"].as_i64().unwrap_or(390) as i32;
+        let height = body["value"]["height"].as_i64().unwrap_or(844) as i32;
 
         Ok((width, height))
     }
@@ -495,9 +532,13 @@ impl WdaClient {
 
         debug!(from_x, from_y, to_x, to_y, duration, "WDA swipe");
 
-        let resp = self.client.post(&url).json(&payload).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA swipe failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA swipe failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or(json!({}));
@@ -521,9 +562,13 @@ impl WdaClient {
         let payload = json!({ "value": text.chars().map(|c| c.to_string()).collect::<Vec<_>>() });
         debug!(text, "WDA type text (session-level)");
 
-        let resp = self.client.post(&url).json(&payload).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA type text failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA type text failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or(json!({}));
@@ -543,9 +588,13 @@ impl WdaClient {
 
         debug!(button, "WDA press button");
 
-        let resp = self.client.post(&url).json(&payload).send().await.map_err(|e| {
-            VelocityError::Config(format!("WDA press button failed: {e}"))
-        })?;
+        let resp = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| VelocityError::Config(format!("WDA press button failed: {e}")))?;
 
         if !resp.status().is_success() {
             let body: Value = resp.json().await.unwrap_or(json!({}));

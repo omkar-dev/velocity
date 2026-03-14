@@ -61,10 +61,7 @@ pub enum VelocityError {
     },
 
     #[error("Unknown flow reference '{flow_id}' in test '{test_name}'")]
-    UnknownFlowRef {
-        flow_id: String,
-        test_name: String,
-    },
+    UnknownFlowRef { flow_id: String, test_name: String },
 
     #[error("Invalid selector in step {step_index} of '{test_name}': {reason}")]
     InvalidSelector {

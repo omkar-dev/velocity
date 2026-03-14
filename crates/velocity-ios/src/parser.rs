@@ -60,9 +60,10 @@ pub fn parse_ios_hierarchy(xml: &str) -> Result<Element> {
         buf.clear();
     }
 
-    let mut result = stack.into_iter().next().ok_or_else(|| {
-        VelocityError::Config("Empty iOS hierarchy XML".to_string())
-    })?;
+    let mut result = stack
+        .into_iter()
+        .next()
+        .ok_or_else(|| VelocityError::Config("Empty iOS hierarchy XML".to_string()))?;
 
     // If the root has exactly one child (the actual app element), update root bounds
     if result.children.len() == 1 {
@@ -162,10 +163,7 @@ mod tests {
     #[test]
     fn test_simplify_ios_type() {
         assert_eq!(simplify_ios_type("XCUIElementTypeButton"), "Button");
-        assert_eq!(
-            simplify_ios_type("XCUIElementTypeStaticText"),
-            "StaticText"
-        );
+        assert_eq!(simplify_ios_type("XCUIElementTypeStaticText"), "StaticText");
         assert_eq!(simplify_ios_type("XCUIElementTypeCell"), "Cell");
         assert_eq!(simplify_ios_type("Other"), "Other");
         assert_eq!(

@@ -72,9 +72,7 @@ impl ParallelRunner {
 
                 async move {
                     // Check fail-fast before starting
-                    if fail_fast
-                        && fail_fast_flag.load(std::sync::atomic::Ordering::Relaxed)
-                    {
+                    if fail_fast && fail_fast_flag.load(std::sync::atomic::Ordering::Relaxed) {
                         return TestResult {
                             test_name: test.name.clone(),
                             status: TestStatus::Skipped,
@@ -136,8 +134,7 @@ impl ParallelRunner {
                             println!("    └ {msg}");
                         }
                         if fail_fast {
-                            fail_fast_flag
-                                .store(true, std::sync::atomic::Ordering::Relaxed);
+                            fail_fast_flag.store(true, std::sync::atomic::Ordering::Relaxed);
                         }
                     }
 
@@ -150,10 +147,22 @@ impl ParallelRunner {
             .await;
 
         let suite_duration = suite_start.elapsed();
-        let passed = results.iter().filter(|r| r.status == TestStatus::Passed).count();
-        let failed = results.iter().filter(|r| r.status == TestStatus::Failed).count();
-        let skipped = results.iter().filter(|r| r.status == TestStatus::Skipped).count();
-        let retried = results.iter().filter(|r| r.status == TestStatus::Retried).count();
+        let passed = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Passed)
+            .count();
+        let failed = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Failed)
+            .count();
+        let skipped = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Skipped)
+            .count();
+        let retried = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Retried)
+            .count();
 
         println!();
         println!("  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

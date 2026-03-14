@@ -12,10 +12,7 @@ pub fn resolve_flows(suite: &TestSuite) -> Result<Vec<TestCase>> {
         .collect()
 }
 
-fn resolve_test_case(
-    test: &TestCase,
-    flow_map: &HashMap<&str, &Flow>,
-) -> Result<TestCase> {
+fn resolve_test_case(test: &TestCase, flow_map: &HashMap<&str, &Flow>) -> Result<TestCase> {
     let resolved_steps = resolve_steps(&test.steps, flow_map, &test.name)?;
     Ok(TestCase {
         name: test.name.clone(),

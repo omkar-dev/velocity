@@ -153,7 +153,7 @@ fn shard_by_duration(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use velocity_common::{Action, Selector, Step};
+    use velocity_common::{Action, Step};
 
     fn make_test(name: &str, tags: Vec<&str>) -> TestCase {
         TestCase {
@@ -225,7 +225,9 @@ mod tests {
 
     #[test]
     fn test_shard_by_hash_deterministic() {
-        let tests: Vec<TestCase> = (0..20).map(|i| make_test(&format!("test_{i}"), vec![])).collect();
+        let tests: Vec<TestCase> = (0..20)
+            .map(|i| make_test(&format!("test_{i}"), vec![]))
+            .collect();
 
         let shard0 = shard_tests(tests.clone(), 0, 3, None);
         let shard1 = shard_tests(tests.clone(), 1, 3, None);
@@ -245,7 +247,9 @@ mod tests {
 
     #[test]
     fn test_shard_by_hash_no_overlap() {
-        let tests: Vec<TestCase> = (0..10).map(|i| make_test(&format!("test_{i}"), vec![])).collect();
+        let tests: Vec<TestCase> = (0..10)
+            .map(|i| make_test(&format!("test_{i}"), vec![]))
+            .collect();
         let shard0 = shard_tests(tests.clone(), 0, 2, None);
         let shard1 = shard_tests(tests.clone(), 1, 2, None);
 

@@ -18,10 +18,7 @@ impl AsyncAdb {
             .and_then(|p| p.parse().ok())
             .unwrap_or(5037);
 
-        Self {
-            host,
-            port,
-        }
+        Self { host, port }
     }
 
     /// Open a fresh connection to the ADB server.
@@ -37,29 +34,31 @@ impl AsyncAdb {
     /// Send an ADB protocol message: 4-char hex length prefix + payload.
     async fn send_message(stream: &mut TcpStream, payload: &str) -> Result<()> {
         let msg = format!("{:04x}{}", payload.len(), payload);
-        stream.write_all(msg.as_bytes()).await.map_err(|e| {
-            VelocityError::Config(format!("ADB write failed: {e}"))
-        })
+        stream
+            .write_all(msg.as_bytes())
+            .await
+            .map_err(|e| VelocityError::Config(format!("ADB write failed: {e}")))
     }
 
     /// Read the 4-byte status response ("OKAY" or "FAIL").
     async fn read_status(stream: &mut TcpStream) -> Result<bool> {
         let mut buf = [0u8; 4];
-        stream.read_exact(&mut buf).await.map_err(|e| {
-            VelocityError::Config(format!("ADB read status failed: {e}"))
-        })?;
+        stream
+            .read_exact(&mut buf)
+            .await
+            .map_err(|e| VelocityError::Config(format!("ADB read status failed: {e}")))?;
         Ok(&buf == b"OKAY")
     }
 
     /// Read a length-prefixed response (4-char hex length + data).
     async fn read_length_prefixed(stream: &mut TcpStream) -> Result<String> {
         let mut len_buf = [0u8; 4];
-        stream.read_exact(&mut len_buf).await.map_err(|e| {
-            VelocityError::Config(format!("ADB read length failed: {e}"))
-        })?;
-        let len_str = std::str::from_utf8(&len_buf).map_err(|e| {
-            VelocityError::Config(format!("ADB invalid length prefix: {e}"))
-        })?;
+        stream
+            .read_exact(&mut len_buf)
+            .await
+            .map_err(|e| VelocityError::Config(format!("ADB read length failed: {e}")))?;
+        let len_str = std::str::from_utf8(&len_buf)
+            .map_err(|e| VelocityError::Config(format!("ADB invalid length prefix: {e}")))?;
         let len = usize::from_str_radix(len_str, 16).map_err(|e| {
             VelocityError::Config(format!("ADB invalid hex length '{len_str}': {e}"))
         })?;
@@ -69,20 +68,21 @@ impl AsyncAdb {
         }
 
         let mut data = vec![0u8; len];
-        stream.read_exact(&mut data).await.map_err(|e| {
-            VelocityError::Config(format!("ADB read data failed: {e}"))
-        })?;
-        String::from_utf8(data).map_err(|e| {
-            VelocityError::Config(format!("ADB invalid UTF-8 response: {e}"))
-        })
+        stream
+            .read_exact(&mut data)
+            .await
+            .map_err(|e| VelocityError::Config(format!("ADB read data failed: {e}")))?;
+        String::from_utf8(data)
+            .map_err(|e| VelocityError::Config(format!("ADB invalid UTF-8 response: {e}")))
     }
 
     /// Read all remaining data from the stream until EOF.
     async fn read_until_eof(stream: &mut TcpStream) -> Result<Vec<u8>> {
         let mut buf = Vec::with_capacity(64 * 1024);
-        stream.read_to_end(&mut buf).await.map_err(|e| {
-            VelocityError::Config(format!("ADB read to EOF failed: {e}"))
-        })?;
+        stream
+            .read_to_end(&mut buf)
+            .await
+            .map_err(|e| VelocityError::Config(format!("ADB read to EOF failed: {e}")))?;
         Ok(buf)
     }
 
@@ -92,8 +92,12 @@ impl AsyncAdb {
         Self::send_message(&mut stream, command).await?;
 
         if !Self::read_status(&mut stream).await? {
-            let error = Self::read_length_prefixed(&mut stream).await.unwrap_or_default();
-            return Err(VelocityError::Config(format!("ADB host command failed: {error}")));
+            let error = Self::read_length_prefixed(&mut stream)
+                .await
+                .unwrap_or_default();
+            return Err(VelocityError::Config(format!(
+                "ADB host command failed: {error}"
+            )));
         }
 
         Self::read_length_prefixed(&mut stream).await
@@ -108,7 +112,9 @@ impl AsyncAdb {
         Self::send_message(&mut stream, &transport).await?;
 
         if !Self::read_status(&mut stream).await? {
-            let error = Self::read_length_prefixed(&mut stream).await.unwrap_or_default();
+            let error = Self::read_length_prefixed(&mut stream)
+                .await
+                .unwrap_or_default();
             return Err(VelocityError::AdbConnectionLost {
                 device_id: device_id.to_string(),
                 reason: format!("Transport switch failed: {error}"),
@@ -119,7 +125,9 @@ impl AsyncAdb {
         Self::send_message(&mut stream, command).await?;
 
         if !Self::read_status(&mut stream).await? {
-            let error = Self::read_length_prefixed(&mut stream).await.unwrap_or_default();
+            let error = Self::read_length_prefixed(&mut stream)
+                .await
+                .unwrap_or_default();
             return Err(VelocityError::AdbConnectionLost {
                 device_id: device_id.to_string(),
                 reason: format!("Device command failed: {error}"),
@@ -128,18 +136,17 @@ impl AsyncAdb {
 
         // Read all remaining output until connection closes
         let data = Self::read_until_eof(&mut stream).await?;
-        String::from_utf8(data).map_err(|e| {
-            VelocityError::AdbConnectionLost {
-                device_id: device_id.to_string(),
-                reason: format!("Invalid UTF-8 in response: {e}"),
-            }
+        String::from_utf8(data).map_err(|e| VelocityError::AdbConnectionLost {
+            device_id: device_id.to_string(),
+            reason: format!("Invalid UTF-8 in response: {e}"),
         })
     }
 
     /// Execute a shell command on a device and return stdout as a string.
     async fn shell(&self, device_id: &str, command: &str) -> Result<String> {
         debug!(device = device_id, command, "async adb shell");
-        self.device_command(device_id, &format!("shell:{command}")).await
+        self.device_command(device_id, &format!("shell:{command}"))
+            .await
     }
 
     /// Execute a shell command on a device and return raw bytes (for screenshots).
@@ -223,13 +230,18 @@ impl AsyncAdb {
     pub async fn install_app(&self, device_id: &str, apk_path: &str) -> Result<()> {
         // For install, we still need the subprocess approach since the ADB protocol
         // for push+install is complex. Use the shell pm install approach instead.
-        let output = self.shell(device_id, &format!(
-            "pm install -r /data/local/tmp/{}",
-            std::path::Path::new(apk_path)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("app.apk")
-        )).await?;
+        let output = self
+            .shell(
+                device_id,
+                &format!(
+                    "pm install -r /data/local/tmp/{}",
+                    std::path::Path::new(apk_path)
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or("app.apk")
+                ),
+            )
+            .await?;
 
         if output.contains("Failure") {
             return Err(VelocityError::Config(format!("Install failed: {output}")));
@@ -244,24 +256,25 @@ impl AsyncAdb {
         clear_state: bool,
     ) -> Result<()> {
         if clear_state {
-            self.shell(device_id, &format!("pm clear {package}")).await?;
+            self.shell(device_id, &format!("pm clear {package}"))
+                .await?;
         }
         self.shell(
             device_id,
             &format!("monkey -p {package} -c android.intent.category.LAUNCHER 1"),
-        ).await?;
+        )
+        .await?;
         Ok(())
     }
 
     pub async fn stop_app(&self, device_id: &str, package: &str) -> Result<()> {
-        self.shell(device_id, &format!("am force-stop {package}")).await?;
+        self.shell(device_id, &format!("am force-stop {package}"))
+            .await?;
         Ok(())
     }
 
     pub async fn dump_hierarchy(&self, device_id: &str) -> Result<String> {
-        let output = self
-            .shell(device_id, "uiautomator dump /dev/tty")
-            .await?;
+        let output = self.shell(device_id, "uiautomator dump /dev/tty").await?;
 
         if let Some(xml_start) = output.find("<?xml") {
             Ok(output[xml_start..].to_string())
@@ -294,13 +307,15 @@ impl AsyncAdb {
         self.shell(
             device_id,
             &format!("input swipe {x} {y} {x} {y} {duration_ms}"),
-        ).await?;
+        )
+        .await?;
         Ok(())
     }
 
     pub async fn input_text(&self, device_id: &str, text: &str) -> Result<()> {
         let escaped = escape_adb_text(text);
-        self.shell(device_id, &format!("input text {escaped}")).await?;
+        self.shell(device_id, &format!("input text {escaped}"))
+            .await?;
         Ok(())
     }
 
@@ -316,12 +331,14 @@ impl AsyncAdb {
         self.shell(
             device_id,
             &format!("input swipe {x1} {y1} {x2} {y2} {duration_ms}"),
-        ).await?;
+        )
+        .await?;
         Ok(())
     }
 
     pub async fn press_key(&self, device_id: &str, keycode: u32) -> Result<()> {
-        self.shell(device_id, &format!("input keyevent {keycode}")).await?;
+        self.shell(device_id, &format!("input keyevent {keycode}"))
+            .await?;
         Ok(())
     }
 
@@ -360,11 +377,7 @@ impl AsyncAdb {
     }
 
     /// Execute multiple shell commands joined with &&.
-    pub async fn batch_shell(
-        &self,
-        device_id: &str,
-        commands: &[&str],
-    ) -> Result<String> {
+    pub async fn batch_shell(&self, device_id: &str, commands: &[&str]) -> Result<String> {
         if commands.is_empty() {
             return Ok(String::new());
         }

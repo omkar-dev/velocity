@@ -169,9 +169,8 @@ impl McpServer {
 
     fn handle_tools_list(&self) -> Result<Value> {
         let tools = self.tool_definitions();
-        Ok(serde_json::to_value(tools).map_err(|e| {
-            VelocityError::Internal(anyhow::anyhow!("Serialization error: {e}"))
-        })?)
+        Ok(serde_json::to_value(tools)
+            .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Serialization error: {e}")))?)
     }
 
     async fn handle_tools_call(&mut self, params: &Value) -> Result<Value> {
@@ -199,40 +198,18 @@ impl McpServer {
                 let devices = self.session.get_devices(&*self.driver).await?;
                 Ok(serde_json::to_value(devices).unwrap_or(Value::Null))
             }
-            "screenshot" => {
-                device::screenshot(&self.driver, &device_id, &arguments).await
-            }
-            "tap" => {
-                interaction::tap(&self.driver, &device_id, &arguments).await
-            }
-            "type_text" => {
-                interaction::type_text(&self.driver, &device_id, &arguments).await
-            }
-            "swipe" => {
-                interaction::swipe(&self.driver, &device_id, &arguments).await
-            }
-            "press_key" => {
-                interaction::press_key(&self.driver, &device_id, &arguments).await
-            }
-            "list_elements" => {
-                query::list_elements(&self.driver, &device_id, &arguments).await
-            }
-            "get_element" => {
-                query::get_element(&self.driver, &device_id, &arguments).await
-            }
-            "assert_visible" => {
-                query::assert_visible(&self.driver, &device_id, &arguments).await
-            }
+            "screenshot" => device::screenshot(&self.driver, &device_id, &arguments).await,
+            "tap" => interaction::tap(&self.driver, &device_id, &arguments).await,
+            "type_text" => interaction::type_text(&self.driver, &device_id, &arguments).await,
+            "swipe" => interaction::swipe(&self.driver, &device_id, &arguments).await,
+            "press_key" => interaction::press_key(&self.driver, &device_id, &arguments).await,
+            "list_elements" => query::list_elements(&self.driver, &device_id, &arguments).await,
+            "get_element" => query::get_element(&self.driver, &device_id, &arguments).await,
+            "assert_visible" => query::assert_visible(&self.driver, &device_id, &arguments).await,
             "list_flows" => flow::list_flows(&config_path, &arguments),
-            "run_flow" => {
-                flow::run_flow(&self.driver, &device_id, &config_path, &arguments)
-                    .await
-            }
+            "run_flow" => flow::run_flow(&self.driver, &device_id, &config_path, &arguments).await,
             "list_tests" => flow::list_tests(&config_path, &arguments),
-            "run_test" => {
-                flow::run_test(&self.driver, &device_id, &config_path, &arguments)
-                    .await
-            }
+            "run_test" => flow::run_test(&self.driver, &device_id, &config_path, &arguments).await,
             "generate_test_skeleton" => flow::generate_test_skeleton(&arguments),
             other => Err(VelocityError::Internal(anyhow::anyhow!(
                 "Unknown tool: {other}"
@@ -439,11 +416,10 @@ fn write_response(stdout: &mut io::Stdout, resp: &JsonRpcResponse) -> Result<()>
     let json = serde_json::to_string(resp)
         .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Serialization error: {e}")))?;
     debug!("Sending: {json}");
-    writeln!(stdout, "{json}").map_err(|e| {
-        VelocityError::Internal(anyhow::anyhow!("Failed to write stdout: {e}"))
-    })?;
-    stdout.flush().map_err(|e| {
-        VelocityError::Internal(anyhow::anyhow!("Failed to flush stdout: {e}"))
-    })?;
+    writeln!(stdout, "{json}")
+        .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Failed to write stdout: {e}")))?;
+    stdout
+        .flush()
+        .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Failed to flush stdout: {e}")))?;
     Ok(())
 }

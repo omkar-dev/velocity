@@ -48,9 +48,8 @@ pub fn save(path: &str, history: &TestHistory) -> Result<()> {
     })?;
 
     let file_path = dir.join(HISTORY_FILENAME);
-    let json = serde_json::to_string_pretty(history).map_err(|e| {
-        VelocityError::Config(format!("failed to serialize history: {e}"))
-    })?;
+    let json = serde_json::to_string_pretty(history)
+        .map_err(|e| VelocityError::Config(format!("failed to serialize history: {e}")))?;
 
     std::fs::write(&file_path, json).map_err(|e| {
         VelocityError::Config(format!(
@@ -75,7 +74,6 @@ pub fn update(history: &mut TestHistory, results: &[TestResult]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
     use std::time::Duration;
     use velocity_common::TestStatus;
 

@@ -125,10 +125,22 @@ impl SuiteRunner {
         }
 
         let suite_duration = suite_start.elapsed();
-        let passed = results.iter().filter(|r| r.status == TestStatus::Passed).count();
-        let failed = results.iter().filter(|r| r.status == TestStatus::Failed).count();
-        let skipped = results.iter().filter(|r| r.status == TestStatus::Skipped).count();
-        let retried = results.iter().filter(|r| r.status == TestStatus::Retried).count();
+        let passed = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Passed)
+            .count();
+        let failed = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Failed)
+            .count();
+        let skipped = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Skipped)
+            .count();
+        let retried = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Retried)
+            .count();
 
         // Update history
         let mut hist = history::load(&config.artifacts_dir).unwrap_or_default();

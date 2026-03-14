@@ -170,7 +170,11 @@ impl SelectorHealer {
             .collect();
 
         // Sort by score descending
-        scored.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        scored.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         let best = scored.into_iter().next()?;
 
@@ -199,13 +203,7 @@ impl SelectorHealer {
         Some((best.element, best.score))
     }
 
-    fn record_healing(
-        &self,
-        original: &str,
-        healed: &str,
-        confidence: f64,
-        element: &Element,
-    ) {
+    fn record_healing(&self, original: &str, healed: &str, confidence: f64, element: &Element) {
         let mapping = HealedMapping {
             original_selector: original.to_string(),
             healed_selector: healed.to_string(),
@@ -252,7 +250,11 @@ impl SelectorHealer {
             VelocityError::Config(format!("Failed to write healed mappings to {path}: {e}"))
         })?;
 
-        info!(path, count = mappings.len(), "persisted healed selector mappings");
+        info!(
+            path,
+            count = mappings.len(),
+            "persisted healed selector mappings"
+        );
         Ok(())
     }
 
@@ -266,10 +268,7 @@ impl SelectorHealer {
 fn flatten_elements(element: &Element, out: &mut Vec<Element>) {
     if element.visible && !element.bounds.is_empty() {
         // Include elements that have some identifying information
-        if element.text.is_some()
-            || element.label.is_some()
-            || !element.platform_id.is_empty()
-        {
+        if element.text.is_some() || element.label.is_some() || !element.platform_id.is_empty() {
             out.push(element.clone());
         }
     }
@@ -323,7 +322,9 @@ fn compute_similarity(
                 score += sub_score;
             }
         }
-        Selector::Index { selector: inner, .. } => {
+        Selector::Index {
+            selector: inner, ..
+        } => {
             return compute_similarity(inner, snapshot, candidate);
         }
     }
@@ -423,7 +424,11 @@ fn levenshtein(a: &str, b: &str) -> usize {
 
     for i in 1..=m {
         for j in 1..=n {
-            let cost = if a_chars[i - 1] == b_chars[j - 1] { 0 } else { 1 };
+            let cost = if a_chars[i - 1] == b_chars[j - 1] {
+                0
+            } else {
+                1
+            };
             dp[i][j] = (dp[i - 1][j] + 1)
                 .min(dp[i][j - 1] + 1)
                 .min(dp[i - 1][j - 1] + cost);
@@ -450,9 +455,7 @@ fn describe_element(element: &Element) -> String {
     }
     format!(
         "type={:?} at ({},{})",
-        element.element_type,
-        element.bounds.x,
-        element.bounds.y
+        element.element_type, element.bounds.x, element.bounds.y
     )
 }
 
@@ -491,14 +494,29 @@ mod tests {
 
     #[test]
     fn test_spatial_similarity_same_position() {
-        let r = Rect { x: 100, y: 200, width: 50, height: 50 };
+        let r = Rect {
+            x: 100,
+            y: 200,
+            width: 50,
+            height: 50,
+        };
         assert_eq!(spatial_similarity(&r, &r), 1.0);
     }
 
     #[test]
     fn test_spatial_similarity_far_apart() {
-        let a = Rect { x: 0, y: 0, width: 50, height: 50 };
-        let b = Rect { x: 900, y: 900, width: 50, height: 50 };
+        let a = Rect {
+            x: 0,
+            y: 0,
+            width: 50,
+            height: 50,
+        };
+        let b = Rect {
+            x: 900,
+            y: 900,
+            width: 50,
+            height: 50,
+        };
         let score = spatial_similarity(&a, &b);
         assert!(score < 0.2, "far apart score was {score}");
     }
@@ -511,7 +529,12 @@ mod tests {
             label: None,
             text: Some("Sign In".to_string()),
             element_type: "Button".to_string(),
-            bounds: Rect { x: 100, y: 500, width: 200, height: 50 },
+            bounds: Rect {
+                x: 100,
+                y: 500,
+                width: 200,
+                height: 50,
+            },
             enabled: true,
             visible: true,
             children: vec![],
@@ -528,7 +551,12 @@ mod tests {
             label: None,
             text: Some("Sign In Here".to_string()),
             element_type: "Button".to_string(),
-            bounds: Rect { x: 100, y: 500, width: 200, height: 50 },
+            bounds: Rect {
+                x: 100,
+                y: 500,
+                width: 200,
+                height: 50,
+            },
             enabled: true,
             visible: true,
             children: vec![],
@@ -544,7 +572,12 @@ mod tests {
             label: None,
             text: None,
             element_type: "View".to_string(),
-            bounds: Rect { x: 0, y: 0, width: 1080, height: 2400 },
+            bounds: Rect {
+                x: 0,
+                y: 0,
+                width: 1080,
+                height: 2400,
+            },
             enabled: true,
             visible: true,
             children: vec![
@@ -553,7 +586,12 @@ mod tests {
                     label: Some("Login".to_string()),
                     text: Some("Login".to_string()),
                     element_type: "Button".to_string(),
-                    bounds: Rect { x: 100, y: 500, width: 200, height: 50 },
+                    bounds: Rect {
+                        x: 100,
+                        y: 500,
+                        width: 200,
+                        height: 50,
+                    },
                     enabled: true,
                     visible: true,
                     children: vec![],
@@ -563,7 +601,12 @@ mod tests {
                     label: None,
                     text: None,
                     element_type: "View".to_string(),
-                    bounds: Rect { x: 0, y: 0, width: 100, height: 100 },
+                    bounds: Rect {
+                        x: 0,
+                        y: 0,
+                        width: 100,
+                        height: 100,
+                    },
                     enabled: true,
                     visible: true,
                     children: vec![],
@@ -585,7 +628,12 @@ mod tests {
             label: Some("Login Button".to_string()),
             text: Some("Login".to_string()),
             element_type: "Button".to_string(),
-            bounds: Rect { x: 0, y: 0, width: 100, height: 50 },
+            bounds: Rect {
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 50,
+            },
             enabled: true,
             visible: true,
             children: vec![],

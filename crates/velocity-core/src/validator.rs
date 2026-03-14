@@ -64,11 +64,7 @@ fn validate_step(
     Ok(())
 }
 
-fn validate_selector(
-    selector: &Selector,
-    test_name: &str,
-    step_index: usize,
-) -> Result<()> {
+fn validate_selector(selector: &Selector, test_name: &str, step_index: usize) -> Result<()> {
     match selector {
         Selector::Id(v)
         | Selector::Text(v)
@@ -83,7 +79,9 @@ fn validate_selector(
                 });
             }
         }
-        Selector::Index { selector: inner, .. } => {
+        Selector::Index {
+            selector: inner, ..
+        } => {
             validate_selector(inner, test_name, step_index)?;
         }
         Selector::Compound(selectors) => {

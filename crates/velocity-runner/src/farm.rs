@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tokio::sync::{Mutex, Semaphore, OwnedSemaphorePermit};
+use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore};
 use tracing::{debug, warn};
 use velocity_common::{DeviceInfo, DeviceState, PlatformDriver, Result, VelocityError};
 
@@ -73,7 +73,11 @@ impl DeviceFarm {
     }
 
     /// Create a farm with a device filter pattern (glob-style: "Pixel*", "*iPhone*").
-    pub fn with_filter(driver: Arc<dyn PlatformDriver>, max_devices: usize, filter: Option<String>) -> Self {
+    pub fn with_filter(
+        driver: Arc<dyn PlatformDriver>,
+        max_devices: usize,
+        filter: Option<String>,
+    ) -> Self {
         Self {
             driver,
             state: Arc::new(Mutex::new(FarmState {
@@ -221,12 +225,26 @@ mod tests {
         async fn list_devices(&self) -> Result<Vec<DeviceInfo>> {
             Ok(self.devices.clone())
         }
-        async fn boot_device(&self, _: &str) -> Result<()> { Ok(()) }
-        async fn shutdown_device(&self, _: &str) -> Result<()> { Ok(()) }
-        async fn install_app(&self, _: &str, _: &str) -> Result<()> { Ok(()) }
-        async fn launch_app(&self, _: &str, _: &str, _: bool) -> Result<()> { Ok(()) }
-        async fn stop_app(&self, _: &str, _: &str) -> Result<()> { Ok(()) }
-        async fn find_element(&self, _: &str, _: &velocity_common::Selector) -> Result<velocity_common::Element> {
+        async fn boot_device(&self, _: &str) -> Result<()> {
+            Ok(())
+        }
+        async fn shutdown_device(&self, _: &str) -> Result<()> {
+            Ok(())
+        }
+        async fn install_app(&self, _: &str, _: &str) -> Result<()> {
+            Ok(())
+        }
+        async fn launch_app(&self, _: &str, _: &str, _: bool) -> Result<()> {
+            Ok(())
+        }
+        async fn stop_app(&self, _: &str, _: &str) -> Result<()> {
+            Ok(())
+        }
+        async fn find_element(
+            &self,
+            _: &str,
+            _: &velocity_common::Selector,
+        ) -> Result<velocity_common::Element> {
             Err(VelocityError::ElementNotFound {
                 selector: "mock".to_string(),
                 timeout_ms: 0,
@@ -234,7 +252,11 @@ mod tests {
                 hierarchy_snapshot: None,
             })
         }
-        async fn find_elements(&self, _: &str, _: &velocity_common::Selector) -> Result<Vec<velocity_common::Element>> {
+        async fn find_elements(
+            &self,
+            _: &str,
+            _: &velocity_common::Selector,
+        ) -> Result<Vec<velocity_common::Element>> {
             Ok(vec![])
         }
         async fn get_hierarchy(&self, _: &str) -> Result<velocity_common::Element> {
@@ -245,18 +267,42 @@ mod tests {
                 hierarchy_snapshot: None,
             })
         }
-        async fn tap(&self, _: &str, _: &velocity_common::Element) -> Result<()> { Ok(()) }
-        async fn double_tap(&self, _: &str, _: &velocity_common::Element) -> Result<()> { Ok(()) }
-        async fn long_press(&self, _: &str, _: &velocity_common::Element, _: u64) -> Result<()> { Ok(()) }
-        async fn input_text(&self, _: &str, _: &velocity_common::Element, _: &str) -> Result<()> { Ok(()) }
-        async fn clear_text(&self, _: &str, _: &velocity_common::Element) -> Result<()> { Ok(()) }
-        async fn swipe(&self, _: &str, _: velocity_common::Direction) -> Result<()> { Ok(()) }
-        async fn swipe_coords(&self, _: &str, _: (i32, i32), _: (i32, i32)) -> Result<()> { Ok(()) }
-        async fn press_key(&self, _: &str, _: velocity_common::Key) -> Result<()> { Ok(()) }
-        async fn screenshot(&self, _: &str) -> Result<Vec<u8>> { Ok(vec![]) }
-        async fn screen_size(&self, _: &str) -> Result<(i32, i32)> { Ok((1080, 2400)) }
-        async fn get_element_text(&self, _: &str, _: &velocity_common::Element) -> Result<String> { Ok(String::new()) }
-        async fn is_element_visible(&self, _: &str, _: &velocity_common::Element) -> Result<bool> { Ok(false) }
+        async fn tap(&self, _: &str, _: &velocity_common::Element) -> Result<()> {
+            Ok(())
+        }
+        async fn double_tap(&self, _: &str, _: &velocity_common::Element) -> Result<()> {
+            Ok(())
+        }
+        async fn long_press(&self, _: &str, _: &velocity_common::Element, _: u64) -> Result<()> {
+            Ok(())
+        }
+        async fn input_text(&self, _: &str, _: &velocity_common::Element, _: &str) -> Result<()> {
+            Ok(())
+        }
+        async fn clear_text(&self, _: &str, _: &velocity_common::Element) -> Result<()> {
+            Ok(())
+        }
+        async fn swipe(&self, _: &str, _: velocity_common::Direction) -> Result<()> {
+            Ok(())
+        }
+        async fn swipe_coords(&self, _: &str, _: (i32, i32), _: (i32, i32)) -> Result<()> {
+            Ok(())
+        }
+        async fn press_key(&self, _: &str, _: velocity_common::Key) -> Result<()> {
+            Ok(())
+        }
+        async fn screenshot(&self, _: &str) -> Result<Vec<u8>> {
+            Ok(vec![])
+        }
+        async fn screen_size(&self, _: &str) -> Result<(i32, i32)> {
+            Ok((1080, 2400))
+        }
+        async fn get_element_text(&self, _: &str, _: &velocity_common::Element) -> Result<String> {
+            Ok(String::new())
+        }
+        async fn is_element_visible(&self, _: &str, _: &velocity_common::Element) -> Result<bool> {
+            Ok(false)
+        }
     }
 
     fn make_devices(count: usize) -> Vec<DeviceInfo> {

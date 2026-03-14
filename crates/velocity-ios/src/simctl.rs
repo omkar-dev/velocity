@@ -26,9 +26,10 @@ impl Simctl {
 
         debug!(args = ?args, "simctl command");
 
-        let output = cmd.output().await.map_err(|e| {
-            VelocityError::Config(format!("Failed to execute xcrun simctl: {e}"))
-        })?;
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| VelocityError::Config(format!("Failed to execute xcrun simctl: {e}")))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -48,9 +49,8 @@ impl Simctl {
     /// List all available simulator devices by parsing `xcrun simctl list devices --json`.
     pub async fn list_devices(&self) -> Result<Vec<DeviceInfo>> {
         let output = self.run_text(&["list", "devices", "--json"]).await?;
-        let parsed: serde_json::Value = serde_json::from_str(&output).map_err(|e| {
-            VelocityError::Config(format!("Failed to parse simctl JSON: {e}"))
-        })?;
+        let parsed: serde_json::Value = serde_json::from_str(&output)
+            .map_err(|e| VelocityError::Config(format!("Failed to parse simctl JSON: {e}")))?;
 
         let mut devices = Vec::new();
         let devices_obj = parsed
@@ -114,12 +114,12 @@ impl Simctl {
     /// Boot a simulator device.
     pub async fn boot(&self, device_id: &str) -> Result<()> {
         debug!(device = device_id, "booting simulator");
-        self.run_text(&["boot", device_id]).await.map_err(|e| {
-            VelocityError::DeviceBootFailed {
+        self.run_text(&["boot", device_id])
+            .await
+            .map_err(|e| VelocityError::DeviceBootFailed {
                 id: device_id.to_string(),
                 reason: format!("{e}"),
-            }
-        })?;
+            })?;
         Ok(())
     }
 

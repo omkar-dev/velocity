@@ -173,19 +173,14 @@ impl std::fmt::Display for Platform {
 }
 
 /// Type of device (physical hardware vs virtual).
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum DeviceType {
     Physical,
     Simulator,
     Emulator,
+    #[default]
     Unknown,
-}
-
-impl Default for DeviceType {
-    fn default() -> Self {
-        Self::Unknown
-    }
 }
 
 impl std::fmt::Display for DeviceType {

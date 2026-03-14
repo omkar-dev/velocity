@@ -149,7 +149,11 @@ impl TreeDiff {
 
 /// Count total nodes in an element tree.
 fn count_nodes(element: &Element) -> usize {
-    1 + element.children.iter().map(|c| count_nodes(c)).sum::<usize>()
+    1 + element
+        .children
+        .iter()
+        .map(|c| count_nodes(c))
+        .sum::<usize>()
 }
 
 #[cfg(test)]
@@ -241,10 +245,7 @@ mod tests {
         let mut td = TreeDiff::new();
         let root1 = make_element(
             "root",
-            vec![
-                make_element("a", vec![]),
-                make_element("b", vec![]),
-            ],
+            vec![make_element("a", vec![]), make_element("b", vec![])],
         );
         td.diff(&root1);
         let root2 = make_element(

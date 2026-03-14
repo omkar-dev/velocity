@@ -9,11 +9,7 @@ pub struct ValidateArgs {
 }
 
 pub fn execute(args: ValidateArgs) -> anyhow::Result<i32> {
-    println!(
-        "{} Validating {}",
-        "=>".cyan().bold(),
-        args.config.bold()
-    );
+    println!("{} Validating {}", "=>".cyan().bold(), args.config.bold());
 
     let suite = match parse_suite(&args.config) {
         Ok(s) => s,
@@ -40,9 +36,14 @@ pub fn execute(args: ValidateArgs) -> anyhow::Result<i32> {
     println!("  {} Configuration is valid", "✓".green().bold());
     println!();
     println!("  App ID:    {}", suite.app_id.cyan());
-    println!("  Platform:  {}", suite.config.platform
-        .map_or("auto-detect".to_string(), |p| p.to_string())
-        .cyan());
+    println!(
+        "  Platform:  {}",
+        suite
+            .config
+            .platform
+            .map_or("auto-detect".to_string(), |p| p.to_string())
+            .cyan()
+    );
     println!("  Flows:     {}", suite.flows.len());
     println!("  Tests:     {}", suite.tests.len());
 

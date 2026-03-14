@@ -149,10 +149,7 @@ pub async fn execute(args: RunArgs) -> anyhow::Result<i32> {
         Some(id) => id.clone(),
         None => {
             let devices = driver.list_devices().await?;
-            devices
-                .first()
-                .map(|d| d.id.clone())
-                .unwrap_or_default()
+            devices.first().map(|d| d.id.clone()).unwrap_or_default()
         }
     };
 
@@ -174,20 +171,12 @@ pub async fn execute(args: RunArgs) -> anyhow::Result<i32> {
         ReportFormat::Junit => {
             let path = format!("{}/junit.xml", args.artifacts_dir);
             velocity_runner::write_junit(&result, &path)?;
-            println!(
-                "{} Report: {}",
-                "=>".cyan().bold(),
-                path.underline()
-            );
+            println!("{} Report: {}", "=>".cyan().bold(), path.underline());
         }
         ReportFormat::Json => {
             let path = format!("{}/results.json", args.artifacts_dir);
             velocity_runner::write_json(&result, &path)?;
-            println!(
-                "{} Report: {}",
-                "=>".cyan().bold(),
-                path.underline()
-            );
+            println!("{} Report: {}", "=>".cyan().bold(), path.underline());
         }
     }
 

@@ -22,9 +22,7 @@ pub struct WdaBootstrap {
 
 impl WdaBootstrap {
     pub fn new() -> Self {
-        let cache_dir = dirs_home()
-            .join(".velocity")
-            .join("wda");
+        let cache_dir = dirs_home().join(".velocity").join("wda");
         Self {
             cache_dir,
             wda_process: None,
@@ -117,9 +115,7 @@ impl WdaBootstrap {
             .stderr(Stdio::piped())
             .output()
             .await
-            .map_err(|e| {
-                VelocityError::Config(format!("Failed to run git clone: {e}"))
-            })?;
+            .map_err(|e| VelocityError::Config(format!("Failed to run git clone: {e}")))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -155,9 +151,7 @@ impl WdaBootstrap {
             .stderr(Stdio::piped())
             .output()
             .await
-            .map_err(|e| {
-                VelocityError::Config(format!("Failed to run xcodebuild: {e}"))
-            })?;
+            .map_err(|e| VelocityError::Config(format!("Failed to run xcodebuild: {e}")))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -182,11 +176,7 @@ impl WdaBootstrap {
 
     /// Launch WDA and wait for readiness using a race between log tailing
     /// and HTTP health polling. Whichever confirms readiness first wins.
-    async fn launch_and_wait_ready(
-        &mut self,
-        wda_dir: &PathBuf,
-        device_id: &str,
-    ) -> Result<()> {
+    async fn launch_and_wait_ready(&mut self, wda_dir: &PathBuf, device_id: &str) -> Result<()> {
         info!("Launching WebDriverAgent on device {device_id}...");
 
         let destination = format!("platform=iOS Simulator,id={device_id}");
@@ -207,9 +197,7 @@ impl WdaBootstrap {
             .stderr(Stdio::piped())
             .kill_on_drop(true)
             .spawn()
-            .map_err(|e| {
-                VelocityError::Config(format!("Failed to launch WDA: {e}"))
-            })?;
+            .map_err(|e| VelocityError::Config(format!("Failed to launch WDA: {e}")))?;
 
         // Take stdout for log tailing
         let stdout = child.stdout.take();

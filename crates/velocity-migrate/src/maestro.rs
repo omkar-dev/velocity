@@ -41,9 +41,7 @@ impl MaestroMigrator {
 
         let output_path = Path::new(output_dir);
         fs::create_dir_all(output_path).map_err(|e| {
-            VelocityError::Internal(anyhow::anyhow!(
-                "Failed to create output directory: {e}"
-            ))
+            VelocityError::Internal(anyhow::anyhow!("Failed to create output directory: {e}"))
         })?;
 
         let mut report = MigrationReport::new();
@@ -81,9 +79,8 @@ impl MaestroMigrator {
     }
 
     pub fn migrate_file(&self, input: &str, output: &str) -> Result<FileMigrationResult> {
-        let content = fs::read_to_string(input).map_err(|e| {
-            VelocityError::Internal(anyhow::anyhow!("Failed to read {input}: {e}"))
-        })?;
+        let content = fs::read_to_string(input)
+            .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Failed to read {input}: {e}")))?;
 
         let doc: Value = serde_yaml::from_str(&content).map_err(|e| {
             let location = e.location();
@@ -198,9 +195,7 @@ impl MaestroMigrator {
                 issues.push(MigrationIssue {
                     line,
                     severity: Severity::Warning,
-                    message: format!(
-                        "Unsupported Maestro construct '{key_str}' was skipped"
-                    ),
+                    message: format!("Unsupported Maestro construct '{key_str}' was skipped"),
                     maestro_construct: key_str.to_string(),
                 });
                 return None;
@@ -247,15 +242,17 @@ impl MaestroMigrator {
         None
     }
 
-    fn convert_tap_on(&self, value: &Value, line: usize, issues: &mut Vec<MigrationIssue>) -> Value {
+    fn convert_tap_on(
+        &self,
+        value: &Value,
+        line: usize,
+        issues: &mut Vec<MigrationIssue>,
+    ) -> Value {
         let selector = extract_selector(value, line, issues);
         let mut step = serde_yaml::Mapping::new();
         let mut action = serde_yaml::Mapping::new();
         let mut tap = serde_yaml::Mapping::new();
-        tap.insert(
-            Value::String("selector".to_string()),
-            selector,
-        );
+        tap.insert(Value::String("selector".to_string()), selector);
         action.insert(Value::String("tap".to_string()), Value::Mapping(tap));
         step.insert(Value::String("action".to_string()), Value::Mapping(action));
         Value::Mapping(step)
@@ -340,10 +337,7 @@ impl MaestroMigrator {
             Value::String("appId".to_string()),
             Value::String(app_id.to_string()),
         );
-        launch.insert(
-            Value::String("clearState".to_string()),
-            Value::Bool(true),
-        );
+        launch.insert(Value::String("clearState".to_string()), Value::Bool(true));
         action.insert(
             Value::String("launchApp".to_string()),
             Value::Mapping(launch),
@@ -365,14 +359,8 @@ impl MaestroMigrator {
         let mut step = serde_yaml::Mapping::new();
         let mut action = serde_yaml::Mapping::new();
         let mut launch = serde_yaml::Mapping::new();
-        launch.insert(
-            Value::String("appId".to_string()),
-            Value::String(app_id),
-        );
-        launch.insert(
-            Value::String("clearState".to_string()),
-            Value::Bool(false),
-        );
+        launch.insert(Value::String("appId".to_string()), Value::String(app_id));
+        launch.insert(Value::String("clearState".to_string()), Value::Bool(false));
         action.insert(
             Value::String("launchApp".to_string()),
             Value::Mapping(launch),
@@ -425,20 +413,12 @@ impl MaestroMigrator {
             Value::String("key".to_string()),
             Value::String("back".to_string()),
         );
-        action.insert(
-            Value::String("pressKey".to_string()),
-            Value::Mapping(press),
-        );
+        action.insert(Value::String("pressKey".to_string()), Value::Mapping(press));
         step.insert(Value::String("action".to_string()), Value::Mapping(action));
         Value::Mapping(step)
     }
 
-    fn convert_swipe(
-        &self,
-        value: &Value,
-        line: usize,
-        issues: &mut Vec<MigrationIssue>,
-    ) -> Value {
+    fn convert_swipe(&self, value: &Value, line: usize, issues: &mut Vec<MigrationIssue>) -> Value {
         let mut step = serde_yaml::Mapping::new();
         let mut action = serde_yaml::Mapping::new();
         let mut swipe = serde_yaml::Mapping::new();
@@ -481,10 +461,7 @@ impl MaestroMigrator {
             }
         }
 
-        action.insert(
-            Value::String("swipe".to_string()),
-            Value::Mapping(swipe),
-        );
+        action.insert(Value::String("swipe".to_string()), Value::Mapping(swipe));
         step.insert(Value::String("action".to_string()), Value::Mapping(action));
         Value::Mapping(step)
     }
@@ -495,15 +472,9 @@ impl MaestroMigrator {
         let mut action = serde_yaml::Mapping::new();
         let mut ss = serde_yaml::Mapping::new();
         if let Some(f) = filename {
-            ss.insert(
-                Value::String("filename".to_string()),
-                Value::String(f),
-            );
+            ss.insert(Value::String("filename".to_string()), Value::String(f));
         }
-        action.insert(
-            Value::String("screenshot".to_string()),
-            Value::Mapping(ss),
-        );
+        action.insert(Value::String("screenshot".to_string()), Value::Mapping(ss));
         step.insert(Value::String("action".to_string()), Value::Mapping(action));
         Value::Mapping(step)
     }
@@ -547,10 +518,7 @@ impl MaestroMigrator {
         let mut step = serde_yaml::Mapping::new();
         let mut action = serde_yaml::Mapping::new();
         let mut run_flow = serde_yaml::Mapping::new();
-        run_flow.insert(
-            Value::String("flow_id".to_string()),
-            Value::String(flow_id),
-        );
+        run_flow.insert(Value::String("flow_id".to_string()), Value::String(flow_id));
         action.insert(
             Value::String("runFlow".to_string()),
             Value::Mapping(run_flow),
@@ -572,14 +540,8 @@ impl MaestroMigrator {
         let mut step = serde_yaml::Mapping::new();
         let mut action = serde_yaml::Mapping::new();
         let mut press = serde_yaml::Mapping::new();
-        press.insert(
-            Value::String("key".to_string()),
-            Value::String(key),
-        );
-        action.insert(
-            Value::String("pressKey".to_string()),
-            Value::Mapping(press),
-        );
+        press.insert(Value::String("key".to_string()), Value::String(key));
+        action.insert(Value::String("pressKey".to_string()), Value::Mapping(press));
         step.insert(Value::String("action".to_string()), Value::Mapping(action));
         Value::Mapping(step)
     }
@@ -591,11 +553,7 @@ impl Default for MaestroMigrator {
     }
 }
 
-fn extract_selector(
-    value: &Value,
-    line: usize,
-    issues: &mut Vec<MigrationIssue>,
-) -> Value {
+fn extract_selector(value: &Value, line: usize, issues: &mut Vec<MigrationIssue>) -> Value {
     match value {
         Value::String(text) => {
             let mut sel = serde_yaml::Mapping::new();
@@ -612,10 +570,7 @@ fn extract_selector(
             } else if let Some(text) = m.get(&Value::String("text".to_string())) {
                 sel.insert(Value::String("text".to_string()), text.clone());
             } else if let Some(aid) = m.get(&Value::String("accessibilityId".to_string())) {
-                sel.insert(
-                    Value::String("accessibilityId".to_string()),
-                    aid.clone(),
-                );
+                sel.insert(Value::String("accessibilityId".to_string()), aid.clone());
             } else {
                 issues.push(MigrationIssue {
                     line,
@@ -625,10 +580,7 @@ fn extract_selector(
                     maestro_construct: "tapOn".to_string(),
                 });
                 if let Some((_, v)) = m.iter().next() {
-                    sel.insert(
-                        Value::String("text".to_string()),
-                        v.clone(),
-                    );
+                    sel.insert(Value::String("text".to_string()), v.clone());
                 }
             }
             Value::Mapping(sel)
@@ -661,10 +613,7 @@ fn selector_from_value(value: &Value) -> Value {
             } else if let Some(text) = m.get(&Value::String("text".to_string())) {
                 sel.insert(Value::String("text".to_string()), text.clone());
             } else if let Some(aid) = m.get(&Value::String("accessibilityId".to_string())) {
-                sel.insert(
-                    Value::String("accessibilityId".to_string()),
-                    aid.clone(),
-                );
+                sel.insert(Value::String("accessibilityId".to_string()), aid.clone());
             } else if let Some((k, v)) = m.iter().next() {
                 sel.insert(k.clone(), v.clone());
             }
@@ -691,14 +640,8 @@ fn build_velocity_yaml(app_id: &str, steps: &[Value]) -> String {
         Value::String("stability_count".to_string()),
         Value::Number(serde_yaml::Number::from(3u64)),
     );
-    config.insert(
-        Value::String("sync".to_string()),
-        Value::Mapping(sync),
-    );
-    doc.insert(
-        Value::String("config".to_string()),
-        Value::Mapping(config),
-    );
+    config.insert(Value::String("sync".to_string()), Value::Mapping(sync));
+    doc.insert(Value::String("config".to_string()), Value::Mapping(config));
 
     let mut test = serde_yaml::Mapping::new();
     test.insert(

@@ -83,18 +83,13 @@ fn write_testcase<W: Write>(writer: &mut Writer<W>, test: &TestResult) -> Result
                 .map_err(xml_err)?;
 
             let mut failure = BytesStart::new("failure");
-            let msg = test
-                .error_message
-                .as_deref()
-                .unwrap_or("Test failed");
+            let msg = test.error_message.as_deref().unwrap_or("Test failed");
             failure.push_attribute(("message", msg));
             failure.push_attribute(("type", "AssertionError"));
 
             // Build failure body with step details
             let body = build_failure_body(test);
-            writer
-                .write_event(Event::Start(failure))
-                .map_err(xml_err)?;
+            writer.write_event(Event::Start(failure)).map_err(xml_err)?;
             writer
                 .write_event(Event::Text(BytesText::new(&body)))
                 .map_err(xml_err)?;
@@ -130,9 +125,7 @@ fn write_testcase<W: Write>(writer: &mut Writer<W>, test: &TestResult) -> Result
                 .write_event(Event::Start(testcase))
                 .map_err(xml_err)?;
             let skipped = BytesStart::new("skipped");
-            writer
-                .write_event(Event::Empty(skipped))
-                .map_err(xml_err)?;
+            writer.write_event(Event::Empty(skipped)).map_err(xml_err)?;
             writer
                 .write_event(Event::End(BytesEnd::new("testcase")))
                 .map_err(xml_err)?;

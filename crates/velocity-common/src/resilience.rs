@@ -288,12 +288,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn launch_app(
-        &self,
-        device_id: &str,
-        app_id: &str,
-        clear_state: bool,
-    ) -> Result<()> {
+    async fn launch_app(&self, device_id: &str, app_id: &str, clear_state: bool) -> Result<()> {
         let did = device_id.to_string();
         let aid = app_id.to_string();
         self.with_retry(|| {
@@ -309,11 +304,7 @@ impl PlatformDriver for ResilientDriver {
         self.inner.stop_app(device_id, app_id).await
     }
 
-    async fn find_element(
-        &self,
-        device_id: &str,
-        selector: &Selector,
-    ) -> Result<Element> {
+    async fn find_element(&self, device_id: &str, selector: &Selector) -> Result<Element> {
         let did = device_id.to_string();
         let sel = selector.clone();
         self.with_retry(|| {
@@ -325,11 +316,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn find_elements(
-        &self,
-        device_id: &str,
-        selector: &Selector,
-    ) -> Result<Vec<Element>> {
+    async fn find_elements(&self, device_id: &str, selector: &Selector) -> Result<Vec<Element>> {
         let did = device_id.to_string();
         let sel = selector.clone();
         self.with_retry(|| {
@@ -375,12 +362,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn long_press(
-        &self,
-        device_id: &str,
-        element: &Element,
-        duration_ms: u64,
-    ) -> Result<()> {
+    async fn long_press(&self, device_id: &str, element: &Element, duration_ms: u64) -> Result<()> {
         let did = device_id.to_string();
         let el = element.clone();
         self.with_retry(|| {
@@ -392,12 +374,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn input_text(
-        &self,
-        device_id: &str,
-        element: &Element,
-        text: &str,
-    ) -> Result<()> {
+    async fn input_text(&self, device_id: &str, element: &Element, text: &str) -> Result<()> {
         let did = device_id.to_string();
         let el = element.clone();
         let txt = text.to_string();
@@ -423,11 +400,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn swipe(
-        &self,
-        device_id: &str,
-        direction: Direction,
-    ) -> Result<()> {
+    async fn swipe(&self, device_id: &str, direction: Direction) -> Result<()> {
         let did = device_id.to_string();
         self.with_retry(|| {
             let did = did.clone();
@@ -437,12 +410,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn swipe_coords(
-        &self,
-        device_id: &str,
-        from: (i32, i32),
-        to: (i32, i32),
-    ) -> Result<()> {
+    async fn swipe_coords(&self, device_id: &str, from: (i32, i32), to: (i32, i32)) -> Result<()> {
         let did = device_id.to_string();
         self.with_retry(|| {
             let did = did.clone();
@@ -484,11 +452,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn get_element_text(
-        &self,
-        device_id: &str,
-        element: &Element,
-    ) -> Result<String> {
+    async fn get_element_text(&self, device_id: &str, element: &Element) -> Result<String> {
         let did = device_id.to_string();
         let el = element.clone();
         self.with_retry(|| {
@@ -500,11 +464,7 @@ impl PlatformDriver for ResilientDriver {
         .await
     }
 
-    async fn is_element_visible(
-        &self,
-        device_id: &str,
-        element: &Element,
-    ) -> Result<bool> {
+    async fn is_element_visible(&self, device_id: &str, element: &Element) -> Result<bool> {
         let did = device_id.to_string();
         let el = element.clone();
         self.with_retry(|| {

@@ -1,17 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 /// Report format for test results output.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ReportFormat {
+    #[default]
     Junit,
     Json,
-}
-
-impl Default for ReportFormat {
-    fn default() -> Self {
-        Self::Junit
-    }
 }
 
 /// Runtime configuration merged from CLI args and config file.

@@ -4,10 +4,7 @@ use base64::Engine;
 use serde_json::Value;
 use velocity_common::{PlatformDriver, Result, VelocityError};
 
-pub async fn list_devices(
-    driver: &Arc<dyn PlatformDriver>,
-    _args: &Value,
-) -> Result<Value> {
+pub async fn list_devices(driver: &Arc<dyn PlatformDriver>, _args: &Value) -> Result<Value> {
     let devices = driver.list_devices().await?;
     serde_json::to_value(&devices)
         .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Serialization error: {e}")))

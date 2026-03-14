@@ -30,8 +30,8 @@ impl StabilityHistory {
         if self.samples.len() < 3 {
             return None;
         }
-        let avg: f64 = self.samples.iter().map(|d| d.as_secs_f64()).sum::<f64>()
-            / self.samples.len() as f64;
+        let avg: f64 =
+            self.samples.iter().map(|d| d.as_secs_f64()).sum::<f64>() / self.samples.len() as f64;
         let variance: f64 = self
             .samples
             .iter()
@@ -195,9 +195,7 @@ pub type SmartPollingSyncEngine = AdaptiveSyncEngine;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use velocity_common::{
-        DeviceInfo, Direction, Element, Key, Rect, Selector,
-    };
+    use velocity_common::{DeviceInfo, Direction, Element, Key, Rect, Selector};
 
     fn hash_element(element: &Element) -> u64 {
         TreeDiff::hash_element(element)

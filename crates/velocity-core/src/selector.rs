@@ -72,14 +72,15 @@ impl SelectorEngine {
         }
 
         // Full tree query
-        let element = driver.find_element(device_id, selector).await.map_err(|_| {
-            VelocityError::ElementNotFound {
+        let element = driver
+            .find_element(device_id, selector)
+            .await
+            .map_err(|_| VelocityError::ElementNotFound {
                 selector: format!("{selector}"),
                 timeout_ms: 0,
                 screenshot: None,
                 hierarchy_snapshot: None,
-            }
-        })?;
+            })?;
 
         // Evict oldest entries if cache is full
         if self.cache.len() >= self.max_size {

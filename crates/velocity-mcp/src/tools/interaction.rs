@@ -12,11 +12,7 @@ fn parse_selector(args: &Value) -> Result<Selector> {
         .map_err(|e| VelocityError::Config(format!("Invalid selector: {e}")))
 }
 
-pub async fn tap(
-    driver: &Arc<dyn PlatformDriver>,
-    device_id: &str,
-    args: &Value,
-) -> Result<Value> {
+pub async fn tap(driver: &Arc<dyn PlatformDriver>, device_id: &str, args: &Value) -> Result<Value> {
     let selector = parse_selector(args)?;
     let element = driver.find_element(device_id, &selector).await?;
     driver.tap(device_id, &element).await?;

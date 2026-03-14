@@ -31,9 +31,7 @@ impl AndroidDriver {
                 info!("Using async TCP ADB client");
                 Box::new(AsyncAdb::new())
             }
-            _ => {
-                Box::new(Adb::new())
-            }
+            _ => Box::new(Adb::new()),
         };
 
         Self {
@@ -85,11 +83,7 @@ impl AndroidDriver {
         }
     }
 
-    async fn swipe_direction_impl(
-        &self,
-        device_id: &str,
-        direction: Direction,
-    ) -> Result<()> {
+    async fn swipe_direction_impl(&self, device_id: &str, direction: Direction) -> Result<()> {
         let (w, h) = self.adb.screen_size(device_id).await?;
         let cx = w / 2;
         let cy = h / 2;
@@ -113,8 +107,8 @@ impl PlatformDriver for AndroidDriver {
     }
 
     async fn boot_device(&self, device_id: &str) -> Result<()> {
-        let emulator_path = std::env::var("VELOCITY_EMULATOR_PATH")
-            .unwrap_or_else(|_| "emulator".to_string());
+        let emulator_path =
+            std::env::var("VELOCITY_EMULATOR_PATH").unwrap_or_else(|_| "emulator".to_string());
 
         debug!(avd = device_id, "Launching Android emulator");
 
@@ -126,10 +120,12 @@ impl PlatformDriver for AndroidDriver {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
-            .map_err(|e| VelocityError::Config(format!(
-                "Failed to launch emulator for AVD '{device_id}'. \
+            .map_err(|e| {
+                VelocityError::Config(format!(
+                    "Failed to launch emulator for AVD '{device_id}'. \
                  Ensure the Android emulator is on PATH or set VELOCITY_EMULATOR_PATH. Error: {e}"
-            )))?;
+                ))
+            })?;
 
         // Poll adb until the device is booted (up to 60 seconds).
         let deadline = Instant::now() + Duration::from_secs(60);
@@ -147,10 +143,13 @@ impl PlatformDriver for AndroidDriver {
                 // Wait for sys.boot_completed
                 if let Ok(output) = self.adb.list_devices().await {
                     if let Some(d) = output.iter().find(|d| d.state == DeviceState::Booted) {
-                        let _ = self.adb.run_device(
-                            &d.id,
-                            &["wait-for-device", "shell", "getprop", "sys.boot_completed"],
-                        ).await;
+                        let _ = self
+                            .adb
+                            .run_device(
+                                &d.id,
+                                &["wait-for-device", "shell", "getprop", "sys.boot_completed"],
+                            )
+                            .await;
                         return Ok(());
                     }
                 }
@@ -168,12 +167,7 @@ impl PlatformDriver for AndroidDriver {
         self.adb.install_app(device_id, app_path).await
     }
 
-    async fn launch_app(
-        &self,
-        device_id: &str,
-        app_id: &str,
-        clear_state: bool,
-    ) -> Result<()> {
+    async fn launch_app(&self, device_id: &str, app_id: &str, clear_state: bool) -> Result<()> {
         self.invalidate_cache();
         self.adb.launch_app(device_id, app_id, clear_state).await
     }
@@ -183,11 +177,7 @@ impl PlatformDriver for AndroidDriver {
         self.adb.stop_app(device_id, app_id).await
     }
 
-    async fn find_element(
-        &self,
-        device_id: &str,
-        selector: &Selector,
-    ) -> Result<Element> {
+    async fn find_element(&self, device_id: &str, selector: &Selector) -> Result<Element> {
         let tree = self.get_cached_hierarchy(device_id).await?;
         let screen = self.screen_bounds(device_id).await?;
         let opts = MatchOptions::default();
@@ -202,11 +192,7 @@ impl PlatformDriver for AndroidDriver {
             })
     }
 
-    async fn find_elements(
-        &self,
-        device_id: &str,
-        selector: &Selector,
-    ) -> Result<Vec<Element>> {
+    async fn find_elements(&self, device_id: &str, selector: &Selector) -> Result<Vec<Element>> {
         let tree = self.get_cached_hierarchy(device_id).await?;
         let screen = self.screen_bounds(device_id).await?;
         let opts = MatchOptions::default();
@@ -235,23 +221,13 @@ impl PlatformDriver for AndroidDriver {
         self.adb.double_tap(device_id, cx, cy).await
     }
 
-    async fn long_press(
-        &self,
-        device_id: &str,
-        element: &Element,
-        duration_ms: u64,
-    ) -> Result<()> {
+    async fn long_press(&self, device_id: &str, element: &Element, duration_ms: u64) -> Result<()> {
         let (cx, cy) = element.bounds.center();
         self.invalidate_cache();
         self.adb.long_press(device_id, cx, cy, duration_ms).await
     }
 
-    async fn input_text(
-        &self,
-        device_id: &str,
-        _element: &Element,
-        text: &str,
-    ) -> Result<()> {
+    async fn input_text(&self, device_id: &str, _element: &Element, text: &str) -> Result<()> {
         self.invalidate_cache();
         self.adb.input_text(device_id, text).await
     }
@@ -264,28 +240,23 @@ impl PlatformDriver for AndroidDriver {
         Ok(())
     }
 
-    async fn swipe(
-        &self,
-        device_id: &str,
-        direction: Direction,
-    ) -> Result<()> {
+    async fn swipe(&self, device_id: &str, direction: Direction) -> Result<()> {
         self.invalidate_cache();
         self.swipe_direction_impl(device_id, direction).await
     }
 
-    async fn swipe_coords(
-        &self,
-        device_id: &str,
-        from: (i32, i32),
-        to: (i32, i32),
-    ) -> Result<()> {
+    async fn swipe_coords(&self, device_id: &str, from: (i32, i32), to: (i32, i32)) -> Result<()> {
         self.invalidate_cache();
-        self.adb.swipe(device_id, from.0, from.1, to.0, to.1, 300).await
+        self.adb
+            .swipe(device_id, from.0, from.1, to.0, to.1, 300)
+            .await
     }
 
     async fn press_key(&self, device_id: &str, key: Key) -> Result<()> {
         self.invalidate_cache();
-        self.adb.press_key(device_id, Self::key_to_keycode(key)).await
+        self.adb
+            .press_key(device_id, Self::key_to_keycode(key))
+            .await
     }
 
     async fn screenshot(&self, device_id: &str) -> Result<Vec<u8>> {
@@ -296,11 +267,7 @@ impl PlatformDriver for AndroidDriver {
         self.adb.screen_size(device_id).await
     }
 
-    async fn get_element_text(
-        &self,
-        device_id: &str,
-        element: &Element,
-    ) -> Result<String> {
+    async fn get_element_text(&self, device_id: &str, element: &Element) -> Result<String> {
         let tree = self.get_cached_hierarchy(device_id).await?;
         let screen = self.screen_bounds(device_id).await?;
         let opts = MatchOptions::default();
@@ -316,14 +283,12 @@ impl PlatformDriver for AndroidDriver {
             })
     }
 
-    async fn is_element_visible(
-        &self,
-        device_id: &str,
-        element: &Element,
-    ) -> Result<bool> {
+    async fn is_element_visible(&self, device_id: &str, element: &Element) -> Result<bool> {
         let tree = self.get_cached_hierarchy(device_id).await?;
         let screen = self.screen_bounds(device_id).await?;
-        let opts = MatchOptions { visible_only: false };
+        let opts = MatchOptions {
+            visible_only: false,
+        };
         let selector = Selector::Id(element.platform_id.clone());
 
         if let Some(found) = find_element(&tree, &selector, &opts, &screen) {

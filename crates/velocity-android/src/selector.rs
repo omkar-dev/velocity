@@ -64,7 +64,11 @@ pub fn find_element<'a>(
     screen: &Rect,
 ) -> Option<&'a Element> {
     // Handle Index selector: find all matches, return Nth
-    if let Selector::Index { selector: inner, index } = selector {
+    if let Selector::Index {
+        selector: inner,
+        index,
+    } = selector
+    {
         let all = find_all_elements(root, inner, opts, screen);
         return all.into_iter().nth(*index);
     }

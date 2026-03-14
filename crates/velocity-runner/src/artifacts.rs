@@ -56,10 +56,7 @@ mod tests {
 
     #[test]
     fn test_sanitize_special_chars() {
-        assert_eq!(
-            sanitize_filename("test/case:1<2>3"),
-            "test_case_1_2_3"
-        );
+        assert_eq!(sanitize_filename("test/case:1<2>3"), "test_case_1_2_3");
     }
 
     #[test]

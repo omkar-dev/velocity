@@ -137,7 +137,12 @@ impl VisualEngine {
         })?;
 
         // Compare the raw PNG bytes
-        let result = compare_images(&baseline_bytes, screenshot_png, masks, self.config.threshold)?;
+        let result = compare_images(
+            &baseline_bytes,
+            screenshot_png,
+            masks,
+            self.config.threshold,
+        )?;
 
         if !result.passed {
             // Save diff image
@@ -176,19 +181,14 @@ impl VisualEngine {
     }
 
     fn save_diff(&self, baseline_name: &str, diff_data: &[u8]) -> Result<PathBuf> {
-        std::fs::create_dir_all(&self.config.diffs_dir).map_err(|e| {
-            VelocityError::Config(format!("Failed to create diffs dir: {e}"))
-        })?;
+        std::fs::create_dir_all(&self.config.diffs_dir)
+            .map_err(|e| VelocityError::Config(format!("Failed to create diffs dir: {e}")))?;
 
-        let diff_name = format!(
-            "diff_{}",
-            baseline_name
-        );
+        let diff_name = format!("diff_{}", baseline_name);
         let diff_path = self.config.diffs_dir.join(&diff_name);
 
-        std::fs::write(&diff_path, diff_data).map_err(|e| {
-            VelocityError::Config(format!("Failed to write diff image: {e}"))
-        })?;
+        std::fs::write(&diff_path, diff_data)
+            .map_err(|e| VelocityError::Config(format!("Failed to write diff image: {e}")))?;
 
         Ok(diff_path)
     }
@@ -204,9 +204,8 @@ impl VisualEngine {
             return Ok(Vec::new());
         }
 
-        let entries = std::fs::read_dir(&self.config.baselines_dir).map_err(|e| {
-            VelocityError::Config(format!("Failed to read baselines dir: {e}"))
-        })?;
+        let entries = std::fs::read_dir(&self.config.baselines_dir)
+            .map_err(|e| VelocityError::Config(format!("Failed to read baselines dir: {e}")))?;
 
         let mut baselines = Vec::new();
         for entry in entries.flatten() {
@@ -302,7 +301,6 @@ fn generate_diff_overlay(_baseline: &[u8], _actual: &[u8]) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_identical_images_pass() {

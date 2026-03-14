@@ -19,11 +19,7 @@ impl Adb {
     /// Execute multiple shell commands in a single ADB invocation by
     /// joining them with `&&`. Returns combined stdout. Use for independent
     /// commands where ordering doesn't matter (e.g. pre-flight checks).
-    pub async fn batch_shell(
-        &self,
-        device_id: &str,
-        commands: &[&str],
-    ) -> Result<String> {
+    pub async fn batch_shell(&self, device_id: &str, commands: &[&str]) -> Result<String> {
         if commands.is_empty() {
             return Ok(String::new());
         }
@@ -43,12 +39,13 @@ impl Adb {
 
         debug!(device = device_id, args = ?args, "adb command");
 
-        let output = cmd.output().await.map_err(|e| {
-            VelocityError::AdbConnectionLost {
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| VelocityError::AdbConnectionLost {
                 device_id: device_id.to_string(),
                 reason: format!("Failed to execute adb: {e}"),
-            }
-        })?;
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -72,9 +69,10 @@ impl Adb {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        let output = cmd.output().await.map_err(|e| {
-            VelocityError::Config(format!("Failed to execute adb: {e}"))
-        })?;
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| VelocityError::Config(format!("Failed to execute adb: {e}")))?;
 
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
@@ -141,7 +139,8 @@ impl Adb {
         clear_state: bool,
     ) -> Result<()> {
         if clear_state {
-            self.run(device_id, &["shell", "pm", "clear", package]).await?;
+            self.run(device_id, &["shell", "pm", "clear", package])
+                .await?;
         }
         // Launch the main activity via monkey (auto-detects launcher activity)
         self.run(
@@ -161,7 +160,8 @@ impl Adb {
     }
 
     pub async fn stop_app(&self, device_id: &str, package: &str) -> Result<()> {
-        self.run(device_id, &["shell", "am", "force-stop", package]).await?;
+        self.run(device_id, &["shell", "am", "force-stop", package])
+            .await?;
         Ok(())
     }
 
@@ -224,7 +224,8 @@ impl Adb {
     pub async fn input_text(&self, device_id: &str, text: &str) -> Result<()> {
         // Escape special characters for adb shell input text
         let escaped = escape_adb_text(text);
-        self.run(device_id, &["shell", "input", "text", &escaped]).await?;
+        self.run(device_id, &["shell", "input", "text", &escaped])
+            .await?;
         Ok(())
     }
 
@@ -270,12 +271,13 @@ impl Adb {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        let output = cmd.output().await.map_err(|e| {
-            VelocityError::AdbConnectionLost {
+        let output = cmd
+            .output()
+            .await
+            .map_err(|e| VelocityError::AdbConnectionLost {
                 device_id: device_id.to_string(),
                 reason: format!("Failed to take screenshot: {e}"),
-            }
-        })?;
+            })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -291,9 +293,7 @@ impl Adb {
     }
 
     pub async fn screen_size(&self, device_id: &str) -> Result<(i32, i32)> {
-        let output = self
-            .run(device_id, &["shell", "wm", "size"])
-            .await?;
+        let output = self.run(device_id, &["shell", "wm", "size"]).await?;
 
         // Output: "Physical size: 1080x2400"
         for line in output.lines() {

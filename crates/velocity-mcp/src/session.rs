@@ -33,10 +33,7 @@ impl McpSession {
     }
 
     /// Get device list, using cache if still valid.
-    pub async fn get_devices(
-        &mut self,
-        driver: &dyn PlatformDriver,
-    ) -> Result<Vec<DeviceInfo>> {
+    pub async fn get_devices(&mut self, driver: &dyn PlatformDriver) -> Result<Vec<DeviceInfo>> {
         if let Some((ref devices, timestamp)) = self.device_list_cache {
             if timestamp.elapsed() < self.cache_ttl {
                 return Ok(devices.clone());
@@ -54,10 +51,7 @@ impl McpSession {
     }
 
     /// Get the current device ID, falling back to auto-detection.
-    pub async fn resolve_device_id(
-        &mut self,
-        driver: &dyn PlatformDriver,
-    ) -> Result<String> {
+    pub async fn resolve_device_id(&mut self, driver: &dyn PlatformDriver) -> Result<String> {
         if let Some(ref id) = self.current_device {
             return Ok(id.clone());
         }

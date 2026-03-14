@@ -6,7 +6,8 @@ use velocity_common::{
 };
 
 pub fn parse_suite(path: &str) -> Result<TestSuite> {
-    let content = std::fs::read_to_string(path).map_err(|e| VelocityError::Config(e.to_string()))?;
+    let content =
+        std::fs::read_to_string(path).map_err(|e| VelocityError::Config(e.to_string()))?;
     parse_suite_from_str(&content).map_err(|e| match e {
         VelocityError::Config(msg) => VelocityError::YamlParse {
             file: path.into(),
@@ -778,10 +779,7 @@ tests:
         let suite = parse_suite_from_str(yaml).unwrap();
         match &suite.tests[0].steps[0].action {
             Action::DoubleTap { selector } => {
-                assert_eq!(
-                    *selector,
-                    Selector::AccessibilityId("heart".to_string())
-                );
+                assert_eq!(*selector, Selector::AccessibilityId("heart".to_string()));
             }
             other => panic!("expected DoubleTap, got {:?}", other),
         }

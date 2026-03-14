@@ -54,12 +54,7 @@ impl NativeSyncClient {
         let addr = format!("{}:{}", self.host, self.port);
         debug!(addr = %addr, "connecting to native sync probe");
 
-        match tokio::time::timeout(
-            self.connect_timeout,
-            TcpStream::connect(&addr),
-        )
-        .await
-        {
+        match tokio::time::timeout(self.connect_timeout, TcpStream::connect(&addr)).await {
             Ok(Ok(stream)) => {
                 debug!("native sync probe connected");
                 self.stream = Some(BufReader::new(stream));
@@ -108,9 +103,10 @@ impl NativeSyncClient {
 
     /// Send a command and read the response.
     async fn send_command(&mut self, request: ProbeRequest) -> Result<ProbeResponse> {
-        let stream = self.stream.as_mut().ok_or_else(|| {
-            VelocityError::Config("Native sync probe not connected".to_string())
-        })?;
+        let stream = self
+            .stream
+            .as_mut()
+            .ok_or_else(|| VelocityError::Config("Native sync probe not connected".to_string()))?;
 
         // Serialize request as JSON + newline
         let mut json = serde_json::to_string(&request).map_err(|e| {
@@ -119,15 +115,18 @@ impl NativeSyncClient {
         json.push('\n');
 
         // Write request
-        stream.get_mut().write_all(json.as_bytes()).await.map_err(|e| {
-            VelocityError::Config(format!("Failed to write to probe: {e}"))
-        })?;
+        stream
+            .get_mut()
+            .write_all(json.as_bytes())
+            .await
+            .map_err(|e| VelocityError::Config(format!("Failed to write to probe: {e}")))?;
 
         // Read response (one line)
         let mut line = String::new();
-        stream.read_line(&mut line).await.map_err(|e| {
-            VelocityError::Config(format!("Failed to read from probe: {e}"))
-        })?;
+        stream
+            .read_line(&mut line)
+            .await
+            .map_err(|e| VelocityError::Config(format!("Failed to read from probe: {e}")))?;
 
         if line.is_empty() {
             self.stream = None;
@@ -136,9 +135,8 @@ impl NativeSyncClient {
             ));
         }
 
-        serde_json::from_str(&line).map_err(|e| {
-            VelocityError::Config(format!("Failed to parse probe response: {e}"))
-        })
+        serde_json::from_str(&line)
+            .map_err(|e| VelocityError::Config(format!("Failed to parse probe response: {e}")))
     }
 }
 
@@ -159,7 +157,10 @@ impl SyncManager {
 
         let native_client = match config.mode {
             velocity_common::SyncMode::Polling => None,
-            _ => Some(NativeSyncClient::new(native_port, config.probe_connect_timeout_ms)),
+            _ => Some(NativeSyncClient::new(
+                native_port,
+                config.probe_connect_timeout_ms,
+            )),
         };
 
         Self {
@@ -177,9 +178,7 @@ impl SyncManager {
         device_id: &str,
     ) -> Result<()> {
         match self.mode {
-            velocity_common::SyncMode::Native => {
-                self.native_wait_for_idle().await
-            }
+            velocity_common::SyncMode::Native => self.native_wait_for_idle().await,
             velocity_common::SyncMode::Polling => {
                 self.polling_engine.wait_for_idle(driver, device_id).await
             }
@@ -207,9 +206,7 @@ impl SyncManager {
         key: &str,
     ) -> Result<()> {
         match self.mode {
-            velocity_common::SyncMode::Native => {
-                self.native_wait_for_idle().await
-            }
+            velocity_common::SyncMode::Native => self.native_wait_for_idle().await,
             velocity_common::SyncMode::Polling => {
                 self.polling_engine
                     .wait_for_idle_keyed(driver, device_id, key)
@@ -255,9 +252,10 @@ impl SyncManager {
 
     /// Use native probe to wait for idle.
     async fn native_wait_for_idle(&mut self) -> Result<()> {
-        let client = self.native_client.as_mut().ok_or_else(|| {
-            VelocityError::Config("Native sync client not available".to_string())
-        })?;
+        let client = self
+            .native_client
+            .as_mut()
+            .ok_or_else(|| VelocityError::Config("Native sync client not available".to_string()))?;
 
         if !client.is_connected() {
             if !client.connect().await {

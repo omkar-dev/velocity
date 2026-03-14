@@ -93,10 +93,7 @@ impl IosDriver {
                     ));
                 }
                 let predicate = predicates.join(" AND ");
-                Ok((
-                    "class chain",
-                    format!("**/XCUIElementTypeAny[{predicate}]"),
-                ))
+                Ok(("class chain", format!("**/XCUIElementTypeAny[{predicate}]")))
             }
         }
     }
@@ -182,7 +179,8 @@ impl IosDriver {
         &'a self,
         device_id: &'a str,
         selector: &'a Selector,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<Element>>> + Send + 'a>> {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Vec<Element>>> + Send + 'a>>
+    {
         Box::pin(async move {
             // Handle Index selector by finding all and picking Nth
             if let Selector::Index {
@@ -204,10 +202,7 @@ impl IosDriver {
 
             let mut elements = Vec::new();
             for we in &wda_elements {
-                match self
-                    .wda_element_to_element(&we.element_id, device_id)
-                    .await
-                {
+                match self.wda_element_to_element(&we.element_id, device_id).await {
                     Ok(el) => elements.push(el),
                     Err(_) => continue,
                 }
@@ -259,12 +254,7 @@ impl PlatformDriver for IosDriver {
         self.simctl.install(device_id, app_path).await
     }
 
-    async fn launch_app(
-        &self,
-        device_id: &str,
-        app_id: &str,
-        clear_state: bool,
-    ) -> Result<()> {
+    async fn launch_app(&self, device_id: &str, app_id: &str, clear_state: bool) -> Result<()> {
         if clear_state {
             let _ = self.simctl.terminate(device_id, app_id).await;
         }
@@ -282,29 +272,22 @@ impl PlatformDriver for IosDriver {
         self.simctl.terminate(device_id, app_id).await
     }
 
-    async fn find_element(
-        &self,
-        device_id: &str,
-        selector: &Selector,
-    ) -> Result<Element> {
+    async fn find_element(&self, device_id: &str, selector: &Selector) -> Result<Element> {
         debug!(selector = %selector, "finding element");
 
         let elements = self.find_via_hierarchy(device_id, selector).await?;
-        elements.into_iter().next().ok_or_else(|| {
-            VelocityError::ElementNotFound {
+        elements
+            .into_iter()
+            .next()
+            .ok_or_else(|| VelocityError::ElementNotFound {
                 selector: selector.to_string(),
                 timeout_ms: 0,
                 screenshot: None,
                 hierarchy_snapshot: None,
-            }
-        })
+            })
     }
 
-    async fn find_elements(
-        &self,
-        device_id: &str,
-        selector: &Selector,
-    ) -> Result<Vec<Element>> {
+    async fn find_elements(&self, device_id: &str, selector: &Selector) -> Result<Vec<Element>> {
         debug!(selector = %selector, "finding elements");
         self.find_via_hierarchy(device_id, selector).await
     }
@@ -368,12 +351,7 @@ impl PlatformDriver for IosDriver {
             .await
     }
 
-    async fn input_text(
-        &self,
-        _device_id: &str,
-        element: &Element,
-        text: &str,
-    ) -> Result<()> {
+    async fn input_text(&self, _device_id: &str, element: &Element, text: &str) -> Result<()> {
         debug!(
             element_id = %element.platform_id,
             text,
@@ -390,9 +368,7 @@ impl PlatformDriver for IosDriver {
             return wda.client().type_text(text).await;
         }
         let wda = self.wda.lock().await;
-        wda.client()
-            .send_keys(&element.platform_id, text)
-            .await
+        wda.client().send_keys(&element.platform_id, text).await
     }
 
     async fn clear_text(&self, _device_id: &str, element: &Element) -> Result<()> {
@@ -418,11 +394,7 @@ impl PlatformDriver for IosDriver {
         wda.client().clear(&element.platform_id).await
     }
 
-    async fn swipe(
-        &self,
-        device_id: &str,
-        direction: Direction,
-    ) -> Result<()> {
+    async fn swipe(&self, device_id: &str, direction: Direction) -> Result<()> {
         debug!(?direction, "swiping by direction");
         let wda = self.wda.lock().await;
         let (w, h) = wda.client().get_screen_size().await?;
@@ -443,22 +415,11 @@ impl PlatformDriver for IosDriver {
         Ok(())
     }
 
-    async fn swipe_coords(
-        &self,
-        _device_id: &str,
-        from: (i32, i32),
-        to: (i32, i32),
-    ) -> Result<()> {
+    async fn swipe_coords(&self, _device_id: &str, from: (i32, i32), to: (i32, i32)) -> Result<()> {
         debug!(?from, ?to, "swiping by coordinates");
         let wda = self.wda.lock().await;
         wda.client()
-            .swipe(
-                from.0 as f64,
-                from.1 as f64,
-                to.0 as f64,
-                to.1 as f64,
-                0.3,
-            )
+            .swipe(from.0 as f64, from.1 as f64, to.0 as f64, to.1 as f64, 0.3)
             .await
     }
 
@@ -487,24 +448,20 @@ impl PlatformDriver for IosDriver {
         wda.client().get_screen_size().await
     }
 
-    async fn get_element_text(
-        &self,
-        _device_id: &str,
-        element: &Element,
-    ) -> Result<String> {
+    async fn get_element_text(&self, _device_id: &str, element: &Element) -> Result<String> {
         debug!(element_id = %element.platform_id, "getting element text");
         if Self::is_hierarchy_element(element) {
-            return Ok(element.text.clone().or_else(|| element.label.clone()).unwrap_or_default());
+            return Ok(element
+                .text
+                .clone()
+                .or_else(|| element.label.clone())
+                .unwrap_or_default());
         }
         let wda = self.wda.lock().await;
         wda.client().get_text(&element.platform_id).await
     }
 
-    async fn is_element_visible(
-        &self,
-        _device_id: &str,
-        element: &Element,
-    ) -> Result<bool> {
+    async fn is_element_visible(&self, _device_id: &str, element: &Element) -> Result<bool> {
         debug!(element_id = %element.platform_id, "checking element visibility");
         // Elements found via hierarchy parsing already have visibility data.
         // Only query WDA for elements that have a WDA session element ID (UUID format).
@@ -517,11 +474,7 @@ impl PlatformDriver for IosDriver {
 }
 
 /// Search the parsed Element tree for all elements matching a Selector.
-fn find_matching_elements(
-    root: &Element,
-    selector: &Selector,
-    screen: &Rect,
-) -> Vec<Element> {
+fn find_matching_elements(root: &Element, selector: &Selector, screen: &Rect) -> Vec<Element> {
     let mut results = Vec::new();
     collect_matching(root, selector, screen, &mut results);
 
@@ -560,8 +513,7 @@ fn element_matches(element: &Element, selector: &Selector, screen: &Rect) -> boo
 
     match selector {
         Selector::Id(id) | Selector::AccessibilityId(id) => {
-            element.platform_id == *id
-                || element.label.as_deref() == Some(id.as_str())
+            element.platform_id == *id || element.label.as_deref() == Some(id.as_str())
         }
         Selector::Text(text) => {
             element.text.as_deref() == Some(text.as_str())
@@ -579,10 +531,8 @@ fn element_matches(element: &Element, selector: &Selector, screen: &Rect) -> boo
         }
         Selector::ClassName(cls) => element.element_type == *cls,
         Selector::Index { .. } => false,
-        Selector::Compound(selectors) => {
-            selectors
-                .iter()
-                .all(|s| element_matches(element, s, screen))
-        }
+        Selector::Compound(selectors) => selectors
+            .iter()
+            .all(|s| element_matches(element, s, screen)),
     }
 }
