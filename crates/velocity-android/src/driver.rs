@@ -4,24 +4,40 @@ use std::time::{Duration, Instant};
 
 use tokio::process::Command;
 use tokio::sync::Mutex;
-use tracing::debug;
+use tracing::{debug, info};
 use velocity_common::*;
 
 use crate::adb::Adb;
+use crate::adb_backend::AdbBackend;
+use crate::async_adb::AsyncAdb;
 use crate::parser::parse_hierarchy_v2;
 use crate::selector::{find_all_elements, find_element, MatchOptions};
 
-/// Android platform driver using ADB shell commands.
+/// Android platform driver supporting both subprocess and async TCP ADB backends.
+///
+/// Set `VELOCITY_ADB_MODE=async` to use the native async TCP client (faster).
+/// Default is `subprocess` for backwards compatibility.
 pub struct AndroidDriver {
-    adb: Adb,
+    adb: Box<dyn AdbBackend>,
     hierarchy_cache: Arc<Mutex<Option<(Element, Instant)>>>,
     cache_ttl: Duration,
 }
 
 impl AndroidDriver {
     pub fn new() -> Self {
+        let mode = std::env::var("VELOCITY_ADB_MODE").unwrap_or_else(|_| "subprocess".to_string());
+        let adb: Box<dyn AdbBackend> = match mode.as_str() {
+            "async" | "tcp" => {
+                info!("Using async TCP ADB client");
+                Box::new(AsyncAdb::new())
+            }
+            _ => {
+                Box::new(Adb::new())
+            }
+        };
+
         Self {
-            adb: Adb::new(),
+            adb,
             hierarchy_cache: Arc::new(Mutex::new(None)),
             cache_ttl: Duration::from_millis(500),
         }
@@ -144,7 +160,6 @@ impl PlatformDriver for AndroidDriver {
     }
 
     async fn shutdown_device(&self, device_id: &str) -> Result<()> {
-        // Send emu kill command - ignore errors since device may already be off
         let _ = self.adb.run_device(device_id, &["emu", "kill"]).await;
         Ok(())
     }
@@ -242,15 +257,9 @@ impl PlatformDriver for AndroidDriver {
     }
 
     async fn clear_text(&self, device_id: &str, element: &Element) -> Result<()> {
-        // Tap on element first, select all, then delete
         self.tap(device_id, element).await?;
-        // Select all: Ctrl+A equivalent on Android
         self.adb.press_key(device_id, 279).await?; // KEYCODE_MOVE_HOME
-        // Long-press shift+end to select all
-        // Simpler approach: use `input keyevent` to select-all and delete
         self.adb.press_key(device_id, 67).await?; // KEYCODE_DEL (backspace)
-        // For a more thorough clear, we could use multiple deletes
-        // but this is good enough for v1
         self.invalidate_cache();
         Ok(())
     }
@@ -292,7 +301,6 @@ impl PlatformDriver for AndroidDriver {
         device_id: &str,
         element: &Element,
     ) -> Result<String> {
-        // Re-fetch from hierarchy to get current text
         let tree = self.get_cached_hierarchy(device_id).await?;
         let screen = self.screen_bounds(device_id).await?;
         let opts = MatchOptions::default();

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
 use std::time::{Duration, Instant};
 
-use velocity_common::{Element, PlatformDriver, Result, SyncConfig, VelocityError};
+use velocity_common::{PlatformDriver, Result, SyncConfig, VelocityError};
+
+use crate::tree_diff::TreeDiff;
 
 /// Tracks historical stabilization times per selector key for prediction.
 struct StabilityHistory {
@@ -51,6 +51,7 @@ impl StabilityHistory {
 pub struct AdaptiveSyncEngine {
     config: SyncConfig,
     history: HashMap<String, StabilityHistory>,
+    tree_diff: TreeDiff,
 }
 
 impl AdaptiveSyncEngine {
@@ -58,7 +59,18 @@ impl AdaptiveSyncEngine {
         Self {
             config,
             history: HashMap::new(),
+            tree_diff: TreeDiff::new(),
         }
+    }
+
+    /// Reset the tree diff tracker (call after mutating actions like tap/input).
+    pub fn invalidate_tree_diff(&mut self) {
+        self.tree_diff.reset();
+    }
+
+    /// Get a reference to the sync config.
+    pub fn config(&self) -> &SyncConfig {
+        &self.config
     }
 
     /// Wait for UI to stabilize, using prediction when available.
@@ -100,22 +112,23 @@ impl AdaptiveSyncEngine {
     }
 
     /// Verify stability by comparing two hierarchy snapshots 50ms apart.
+    /// Uses TreeDiff for O(1) hash comparison when possible.
     async fn verify_stable(
-        &self,
+        &mut self,
         driver: &dyn PlatformDriver,
         device_id: &str,
     ) -> Result<bool> {
         let tree1 = driver.get_hierarchy(device_id).await?;
-        let hash1 = hash_element(&tree1);
+        self.tree_diff.diff(&tree1);
         tokio::time::sleep(Duration::from_millis(50)).await;
         let tree2 = driver.get_hierarchy(device_id).await?;
-        let hash2 = hash_element(&tree2);
-        Ok(hash1 == hash2)
+        Ok(self.tree_diff.is_stable(&tree2))
     }
 
-    /// Adaptive polling: aggressive when changes detected, relaxed when stable.
+    /// Adaptive polling: uses TreeDiff for incremental comparison.
+    /// Aggressive when changes detected, relaxed when stable.
     async fn poll_for_stable(
-        &self,
+        &mut self,
         driver: &dyn PlatformDriver,
         device_id: &str,
     ) -> Result<()> {
@@ -123,7 +136,6 @@ impl AdaptiveSyncEngine {
         let required = self.config.stability_count;
 
         let mut consecutive_stable = 0u32;
-        let mut prev_hash: Option<u64> = None;
         let mut interval = Duration::from_millis(self.config.interval_ms);
         let min_interval =
             Duration::from_millis(self.config.interval_ms / 4).max(Duration::from_millis(20));
@@ -139,27 +151,22 @@ impl AdaptiveSyncEngine {
             }
 
             let hierarchy = driver.get_hierarchy(device_id).await?;
-            let current_hash = hash_element(&hierarchy);
+            let diff_result = self.tree_diff.diff(&hierarchy);
 
-            match prev_hash {
-                Some(prev) if prev == current_hash => {
-                    consecutive_stable += 1;
-                    if consecutive_stable >= required {
-                        return Ok(());
-                    }
-                    if self.config.adaptive {
-                        interval = (interval * 3 / 2).min(max_interval);
-                    }
+            if diff_result.unchanged {
+                consecutive_stable += 1;
+                if consecutive_stable >= required {
+                    return Ok(());
                 }
-                _ => {
-                    consecutive_stable = 0;
-                    if self.config.adaptive {
-                        interval = min_interval;
-                    }
+                if self.config.adaptive {
+                    interval = (interval * 3 / 2).min(max_interval);
+                }
+            } else {
+                consecutive_stable = 0;
+                if self.config.adaptive {
+                    interval = min_interval;
                 }
             }
-
-            prev_hash = Some(current_hash);
 
             let remaining = deadline.saturating_duration_since(Instant::now());
             let sleep_time = interval.min(remaining);
@@ -185,35 +192,16 @@ impl AdaptiveSyncEngine {
 // Keep the old name as an alias for backwards compatibility in executor.rs
 pub type SmartPollingSyncEngine = AdaptiveSyncEngine;
 
-fn hash_element(element: &Element) -> u64 {
-    let mut hasher = DefaultHasher::new();
-    hash_element_recursive(element, &mut hasher);
-    hasher.finish()
-}
-
-fn hash_element_recursive(element: &Element, hasher: &mut DefaultHasher) {
-    element.platform_id.hash(hasher);
-    element.label.hash(hasher);
-    element.text.hash(hasher);
-    element.element_type.hash(hasher);
-    element.bounds.x.hash(hasher);
-    element.bounds.y.hash(hasher);
-    element.bounds.width.hash(hasher);
-    element.bounds.height.hash(hasher);
-    element.enabled.hash(hasher);
-    element.visible.hash(hasher);
-    element.children.len().hash(hasher);
-    for child in &element.children {
-        hash_element_recursive(child, hasher);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use velocity_common::{
         DeviceInfo, Direction, Element, Key, Rect, Selector,
     };
+
+    fn hash_element(element: &Element) -> u64 {
+        TreeDiff::hash_element(element)
+    }
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -346,6 +334,7 @@ mod tests {
             stability_count: 3,
             timeout_ms: 5000,
             adaptive: false,
+            ..Default::default()
         };
 
         let mut engine = AdaptiveSyncEngine::new(config);
@@ -367,6 +356,7 @@ mod tests {
             stability_count: 3,
             timeout_ms: 100,
             adaptive: false,
+            ..Default::default()
         };
 
         let mut engine = AdaptiveSyncEngine::new(config);

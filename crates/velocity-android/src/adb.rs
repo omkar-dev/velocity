@@ -2,7 +2,7 @@ use std::process::Stdio;
 
 use tokio::process::Command;
 use tracing::debug;
-use velocity_common::{DeviceInfo, DeviceState, Platform, Result, VelocityError};
+use velocity_common::{DeviceInfo, DeviceState, DeviceType, Platform, Result, VelocityError};
 
 /// Wrapper around ADB subprocess calls with optional command batching.
 pub struct Adb {
@@ -103,12 +103,16 @@ impl Adb {
 
             let mut name = id.clone();
             let mut os_version = None;
+            let mut device_type = DeviceType::Emulator;
             for part in &parts[2..] {
                 if let Some(model) = part.strip_prefix("model:") {
                     name = model.to_string();
                 }
                 if let Some(ver) = part.strip_prefix("transport_id:") {
                     os_version = Some(ver.to_string());
+                }
+                if part.starts_with("usb:") {
+                    device_type = DeviceType::Physical;
                 }
             }
 
@@ -118,6 +122,7 @@ impl Adb {
                 platform: Platform::Android,
                 state,
                 os_version,
+                device_type,
             });
         }
 

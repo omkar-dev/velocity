@@ -1,6 +1,9 @@
+use std::time::{Duration, Instant};
+
 use base64::Engine;
 use reqwest::Client;
 use serde_json::{json, Value};
+use tokio::sync::Mutex;
 use tracing::debug;
 use velocity_common::{Result, VelocityError};
 
@@ -10,20 +13,70 @@ pub struct WdaElement {
     pub element_id: String,
 }
 
+/// Cached hierarchy source with TTL.
+struct SourceCache {
+    xml: String,
+    fetched_at: Instant,
+    ttl: Duration,
+}
+
+impl SourceCache {
+    fn is_valid(&self) -> bool {
+        self.fetched_at.elapsed() < self.ttl
+    }
+}
+
 /// HTTP client for communicating with WebDriverAgent.
+///
+/// v2 improvements:
+/// - Connection pooling via reqwest (keep-alive, idle pool)
+/// - Hierarchy source caching with configurable TTL
+/// - Warm-up method for pre-establishing connections
 pub struct WdaClient {
     base_url: String,
     session_id: Option<String>,
     client: Client,
+    source_cache: Mutex<Option<SourceCache>>,
+    cache_ttl: Duration,
 }
 
 impl WdaClient {
     pub fn new(base_url: &str) -> Self {
+        // Configure client with connection pooling and keep-alive
+        let client = Client::builder()
+            .pool_max_idle_per_host(4)
+            .pool_idle_timeout(Duration::from_secs(60))
+            .tcp_keepalive(Duration::from_secs(30))
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(30))
+            .build()
+            .unwrap_or_else(|_| Client::new());
+
         Self {
             base_url: base_url.trim_end_matches('/').to_string(),
             session_id: None,
-            client: Client::new(),
+            client,
+            source_cache: Mutex::new(None),
+            cache_ttl: Duration::from_millis(500),
         }
+    }
+
+    /// Set the hierarchy source cache TTL.
+    pub fn set_cache_ttl(&mut self, ttl: Duration) {
+        self.cache_ttl = ttl;
+    }
+
+    /// Invalidate the cached hierarchy source.
+    pub async fn invalidate_source_cache(&self) {
+        let mut cache = self.source_cache.lock().await;
+        *cache = None;
+    }
+
+    /// Pre-establish a connection to WDA and verify it's responsive.
+    pub async fn warm_up(&self) -> Result<()> {
+        self.health_check().await?;
+        debug!("WDA connection warmed up");
+        Ok(())
     }
 
     pub fn session_id(&self) -> Option<&str> {
@@ -300,10 +353,40 @@ impl WdaClient {
         Ok(body["value"].as_bool().unwrap_or(false))
     }
 
-    /// Get the full XML source hierarchy from WDA.
+    /// Get the full XML source hierarchy from WDA (cached).
+    /// Returns cached result if within TTL, otherwise fetches fresh.
     pub async fn get_source(&self) -> Result<String> {
+        // Check cache first
+        {
+            let cache = self.source_cache.lock().await;
+            if let Some(ref cached) = *cache {
+                if cached.is_valid() {
+                    debug!("WDA get source (cache hit)");
+                    return Ok(cached.xml.clone());
+                }
+            }
+        }
+
+        let xml = self.get_source_fresh().await?;
+
+        // Update cache
+        {
+            let mut cache = self.source_cache.lock().await;
+            *cache = Some(SourceCache {
+                xml: xml.clone(),
+                fetched_at: Instant::now(),
+                ttl: self.cache_ttl,
+            });
+        }
+
+        Ok(xml)
+    }
+
+    /// Get the full XML source hierarchy from WDA, bypassing cache.
+    /// Used by the sync engine which needs fresh data every cycle.
+    pub async fn get_source_fresh(&self) -> Result<String> {
         let url = format!("{}/source", self.base_url);
-        debug!("WDA get source");
+        debug!("WDA get source (fresh)");
 
         let resp = self.client.get(&url).send().await.map_err(|e| {
             VelocityError::Config(format!("WDA get source failed: {e}"))

@@ -1,16 +1,24 @@
 pub mod env;
 pub mod executor;
+pub mod healing;
+pub mod impact;
+pub mod native_sync;
 pub mod parser;
 pub mod resolver;
 pub mod selector;
 pub mod streaming;
 pub mod sync;
+pub mod tree_diff;
 pub mod validator;
+pub mod visual;
 
 pub use executor::TestExecutor;
+pub use healing::{HealingConfig, SelectorHealer};
+pub use native_sync::{NativeSyncClient, SyncManager};
 pub use parser::{parse_suite, parse_suite_from_str};
 pub use resolver::resolve_flows;
 pub use selector::SelectorEngine;
 pub use streaming::{parse_headers, ParserMode, TestHeader};
 pub use sync::{AdaptiveSyncEngine, SmartPollingSyncEngine};
+pub use tree_diff::TreeDiff;
 pub use validator::validate_suite;

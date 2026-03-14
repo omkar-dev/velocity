@@ -33,22 +33,38 @@ const OPEN: u8 = 1;
 const HALF_OPEN: u8 = 2;
 
 /// Prevents cascade failures when the underlying driver becomes unresponsive.
+///
+/// v2 enhancements:
+/// - Gradual ramp-up in half-open state (allows limited requests before full close)
+/// - Tracing events on state transitions for observability
+/// - Configurable from YAML
 pub struct CircuitBreaker {
     state: AtomicU8,
     failure_count: AtomicU32,
     last_failure_epoch_ms: AtomicU32,
+    half_open_successes: AtomicU32,
     threshold: u32,
     reset_timeout: Duration,
+    half_open_max_requests: u32,
+    name: String,
 }
 
 impl CircuitBreaker {
     pub fn new(threshold: u32, reset_timeout: Duration) -> Self {
+        Self::named("global", threshold, reset_timeout, 2)
+    }
+
+    /// Create a named circuit breaker (e.g., per-device).
+    pub fn named(name: &str, threshold: u32, reset_timeout: Duration, half_open_max: u32) -> Self {
         Self {
             state: AtomicU8::new(CLOSED),
             failure_count: AtomicU32::new(0),
             last_failure_epoch_ms: AtomicU32::new(0),
+            half_open_successes: AtomicU32::new(0),
             threshold,
             reset_timeout,
+            half_open_max_requests: half_open_max,
+            name: name.to_string(),
         }
     }
 
@@ -58,7 +74,9 @@ impl CircuitBreaker {
             let last = self.last_failure_epoch_ms.load(Ordering::SeqCst);
             let now = epoch_ms_u32();
             if now.saturating_sub(last) > self.reset_timeout.as_millis() as u32 {
+                tracing::info!(breaker = %self.name, "circuit breaker transitioning to half-open");
                 self.state.store(HALF_OPEN, Ordering::SeqCst);
+                self.half_open_successes.store(0, Ordering::SeqCst);
                 return false;
             }
             return true;
@@ -66,18 +84,63 @@ impl CircuitBreaker {
         false
     }
 
+    /// Current state name for diagnostics.
+    pub fn state_name(&self) -> &'static str {
+        match self.state.load(Ordering::SeqCst) {
+            CLOSED => "closed",
+            OPEN => "open",
+            HALF_OPEN => "half-open",
+            _ => "unknown",
+        }
+    }
+
     pub fn on_success(&self) {
-        self.failure_count.store(0, Ordering::SeqCst);
-        self.state.store(CLOSED, Ordering::SeqCst);
+        let prev_state = self.state.load(Ordering::SeqCst);
+        if prev_state == HALF_OPEN {
+            let successes = self.half_open_successes.fetch_add(1, Ordering::SeqCst) + 1;
+            if successes >= self.half_open_max_requests {
+                tracing::info!(
+                    breaker = %self.name,
+                    successes,
+                    "circuit breaker closing after successful half-open ramp-up"
+                );
+                self.failure_count.store(0, Ordering::SeqCst);
+                self.state.store(CLOSED, Ordering::SeqCst);
+            }
+        } else {
+            self.failure_count.store(0, Ordering::SeqCst);
+            self.state.store(CLOSED, Ordering::SeqCst);
+        }
     }
 
     pub fn on_failure(&self) {
         let count = self.failure_count.fetch_add(1, Ordering::SeqCst) + 1;
         self.last_failure_epoch_ms
             .store(epoch_ms_u32(), Ordering::SeqCst);
-        if count >= self.threshold {
+
+        let prev_state = self.state.load(Ordering::SeqCst);
+
+        if prev_state == HALF_OPEN {
+            // Any failure in half-open goes straight back to open
+            tracing::warn!(
+                breaker = %self.name,
+                "circuit breaker re-opening from half-open after failure"
+            );
+            self.state.store(OPEN, Ordering::SeqCst);
+        } else if count >= self.threshold {
+            tracing::warn!(
+                breaker = %self.name,
+                failures = count,
+                threshold = self.threshold,
+                "circuit breaker opening"
+            );
             self.state.store(OPEN, Ordering::SeqCst);
         }
+    }
+
+    /// Failure count for diagnostics.
+    pub fn failure_count(&self) -> u32 {
+        self.failure_count.load(Ordering::SeqCst)
     }
 }
 

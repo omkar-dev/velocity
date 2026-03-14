@@ -103,6 +103,7 @@ impl Simctl {
                     platform: Platform::Ios,
                     state,
                     os_version: os_version.clone(),
+                    device_type: velocity_common::DeviceType::Simulator,
                 });
             }
         }
@@ -239,6 +240,7 @@ mod tests {
                         _ => DeviceState::Unknown,
                     },
                     os_version: os_version.clone(),
+                    device_type: velocity_common::DeviceType::Simulator,
                 });
             }
         }

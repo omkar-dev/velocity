@@ -48,11 +48,15 @@ struct FarmState {
 /// Devices are discovered from the platform driver on `refresh()`, and can be
 /// leased exclusively via `acquire()`. When the `Lease` is dropped, the device
 /// is automatically returned to the pool.
+///
+/// v2: Supports `--workers N` where N can exceed device count (workers queue for devices),
+/// and `--device-filter` to target specific devices by name/ID pattern.
 pub struct DeviceFarm {
     driver: Arc<dyn PlatformDriver>,
     state: Arc<Mutex<FarmState>>,
     semaphore: Arc<Semaphore>,
     max_devices: usize,
+    device_filter: Option<String>,
 }
 
 impl DeviceFarm {
@@ -64,6 +68,20 @@ impl DeviceFarm {
             })),
             semaphore: Arc::new(Semaphore::new(max_devices)),
             max_devices,
+            device_filter: None,
+        }
+    }
+
+    /// Create a farm with a device filter pattern (glob-style: "Pixel*", "*iPhone*").
+    pub fn with_filter(driver: Arc<dyn PlatformDriver>, max_devices: usize, filter: Option<String>) -> Self {
+        Self {
+            driver,
+            state: Arc::new(Mutex::new(FarmState {
+                devices: HashMap::new(),
+            })),
+            semaphore: Arc::new(Semaphore::new(max_devices)),
+            max_devices,
+            device_filter: filter,
         }
     }
 
@@ -72,11 +90,26 @@ impl DeviceFarm {
         let devices = self.driver.list_devices().await?;
         let mut state = self.state.lock().await;
 
-        let booted: Vec<DeviceInfo> = devices
+        let mut booted: Vec<DeviceInfo> = devices
             .into_iter()
             .filter(|d| d.state == DeviceState::Booted)
-            .take(self.max_devices)
             .collect();
+
+        // Apply device filter if set
+        if let Some(ref pattern) = self.device_filter {
+            let pat = pattern.to_lowercase();
+            booted.retain(|d| {
+                let name = d.name.to_lowercase();
+                let id = d.id.to_lowercase();
+                if pat.contains('*') {
+                    glob_match(&pat, &name) || glob_match(&pat, &id)
+                } else {
+                    name.contains(&pat) || id.contains(&pat)
+                }
+            });
+        }
+
+        let booted: Vec<DeviceInfo> = booted.into_iter().take(self.max_devices).collect();
 
         let count = booted.len();
 
@@ -146,6 +179,34 @@ impl DeviceFarm {
     }
 }
 
+/// Simple glob matching supporting `*` as wildcard.
+fn glob_match(pattern: &str, text: &str) -> bool {
+    if !pattern.contains('*') {
+        return pattern == text;
+    }
+    let parts: Vec<&str> = pattern.split('*').collect();
+    let mut pos = 0;
+    for (i, part) in parts.iter().enumerate() {
+        if part.is_empty() {
+            continue;
+        }
+        match text[pos..].find(part) {
+            Some(idx) => {
+                if i == 0 && idx != 0 {
+                    return false; // Pattern doesn't start with *, must match from beginning
+                }
+                pos += idx + part.len();
+            }
+            None => return false,
+        }
+    }
+    // If pattern doesn't end with *, text must end at pos
+    if !pattern.ends_with('*') {
+        return pos == text.len();
+    }
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -206,6 +267,7 @@ mod tests {
                 platform: Platform::Android,
                 state: DeviceState::Booted,
                 os_version: None,
+                device_type: velocity_common::DeviceType::Emulator,
             })
             .collect()
     }

@@ -266,15 +266,13 @@ impl PlatformDriver for IosDriver {
         clear_state: bool,
     ) -> Result<()> {
         if clear_state {
-            // Terminate first, then uninstall and reinstall to clear state
             let _ = self.simctl.terminate(device_id, app_id).await;
-            // Note: full state clearing would require uninstall + reinstall of the .app
-            // For now, just terminate and relaunch
         }
 
         // Ensure WDA session
         let mut wda = self.wda.lock().await;
         wda.ensure_session(device_id, app_id).await?;
+        wda.client().invalidate_source_cache().await;
         drop(wda);
 
         self.simctl.launch(device_id, app_id).await
@@ -314,7 +312,8 @@ impl PlatformDriver for IosDriver {
     async fn get_hierarchy(&self, device_id: &str) -> Result<Element> {
         debug!(device_id, "getting hierarchy");
         let wda = self.wda.lock().await;
-        let xml = wda.client().get_source().await?;
+        // Always fetch fresh for sync engine — bypass cache
+        let xml = wda.client().get_source_fresh().await?;
         drop(wda);
         parse_ios_hierarchy(&xml)
     }

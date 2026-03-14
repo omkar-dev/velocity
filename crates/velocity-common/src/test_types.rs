@@ -28,10 +28,30 @@ pub struct TestCase {
     pub steps: Vec<Step>,
 }
 
+/// Sync engine mode selection.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum SyncMode {
+    /// v1 polling-based sync (default).
+    Polling,
+    /// v2 native probe sync (requires probe embedded in app).
+    Native,
+    /// Try native first, fallback to polling if probe unavailable.
+    Auto,
+}
+
+impl Default for SyncMode {
+    fn default() -> Self {
+        Self::Auto
+    }
+}
+
 /// Sync engine configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncConfig {
+    #[serde(default)]
+    pub mode: SyncMode,
     #[serde(default = "default_sync_interval")]
     pub interval_ms: u64,
     #[serde(default = "default_stability_count")]
@@ -40,6 +60,12 @@ pub struct SyncConfig {
     pub timeout_ms: u64,
     #[serde(default = "default_adaptive")]
     pub adaptive: bool,
+    #[serde(default = "default_native_port_ios")]
+    pub native_port_ios: u16,
+    #[serde(default = "default_native_port_android")]
+    pub native_port_android: u16,
+    #[serde(default = "default_probe_connect_timeout")]
+    pub probe_connect_timeout_ms: u64,
 }
 
 fn default_sync_interval() -> u64 {
@@ -54,14 +80,27 @@ fn default_sync_timeout() -> u64 {
 fn default_adaptive() -> bool {
     true
 }
+fn default_native_port_ios() -> u16 {
+    19400
+}
+fn default_native_port_android() -> u16 {
+    19401
+}
+fn default_probe_connect_timeout() -> u64 {
+    2000
+}
 
 impl Default for SyncConfig {
     fn default() -> Self {
         Self {
+            mode: SyncMode::default(),
             interval_ms: default_sync_interval(),
             stability_count: default_stability_count(),
             timeout_ms: default_sync_timeout(),
             adaptive: default_adaptive(),
+            native_port_ios: default_native_port_ios(),
+            native_port_android: default_native_port_android(),
+            probe_connect_timeout_ms: default_probe_connect_timeout(),
         }
     }
 }

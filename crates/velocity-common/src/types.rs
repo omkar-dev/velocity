@@ -172,6 +172,33 @@ impl std::fmt::Display for Platform {
     }
 }
 
+/// Type of device (physical hardware vs virtual).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DeviceType {
+    Physical,
+    Simulator,
+    Emulator,
+    Unknown,
+}
+
+impl Default for DeviceType {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+impl std::fmt::Display for DeviceType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Physical => write!(f, "physical"),
+            Self::Simulator => write!(f, "simulator"),
+            Self::Emulator => write!(f, "emulator"),
+            Self::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
 /// Information about a connected device.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceInfo {
@@ -180,6 +207,8 @@ pub struct DeviceInfo {
     pub platform: Platform,
     pub state: DeviceState,
     pub os_version: Option<String>,
+    #[serde(default)]
+    pub device_type: DeviceType,
 }
 
 /// State of a device.
