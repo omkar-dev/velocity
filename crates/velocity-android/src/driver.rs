@@ -23,6 +23,12 @@ pub struct AndroidDriver {
     cache_ttl: Duration,
 }
 
+impl Default for AndroidDriver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AndroidDriver {
     pub fn new() -> Self {
         let mode = std::env::var("VELOCITY_ADB_MODE").unwrap_or_else(|_| "subprocess".to_string());

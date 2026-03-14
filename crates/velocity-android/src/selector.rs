@@ -41,11 +41,11 @@ fn matches(element: &Element, selector: &Selector, opts: &MatchOptions, screen: 
             element
                 .text
                 .as_ref()
-                .map_or(false, |t| t.contains(substr.as_str()))
+                .is_some_and(|t| t.contains(substr.as_str()))
                 || element
                     .label
                     .as_ref()
-                    .map_or(false, |l| l.contains(substr.as_str()))
+                    .is_some_and(|l| l.contains(substr.as_str()))
         }
         Selector::AccessibilityId(aid) => element.label.as_deref() == Some(aid.as_str()),
         Selector::ClassName(cls) => element.element_type == *cls,

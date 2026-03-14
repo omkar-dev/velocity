@@ -9,6 +9,12 @@ pub struct Adb {
     adb_path: String,
 }
 
+impl Default for Adb {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Adb {
     pub fn new() -> Self {
         Self {

@@ -187,7 +187,7 @@ impl MaestroMigrator {
     ) -> Option<Value> {
         let mapping = step.as_mapping()?;
 
-        for (key, value) in mapping {
+        if let Some((key, value)) = mapping.into_iter().next() {
             let key_str = key.as_str()?;
 
             // Check for unsupported constructs
@@ -350,7 +350,7 @@ impl MaestroMigrator {
         let app_id = match value {
             Value::String(s) => s.clone(),
             Value::Mapping(m) => m
-                .get(&Value::String("appId".to_string()))
+                .get(Value::String("appId".to_string()))
                 .and_then(|v| v.as_str())
                 .unwrap_or("com.example.app")
                 .to_string(),
@@ -375,12 +375,12 @@ impl MaestroMigrator {
         let mut scroll = serde_yaml::Mapping::new();
 
         if let Value::Mapping(m) = value {
-            if let Some(element) = m.get(&Value::String("element".to_string())) {
+            if let Some(element) = m.get(Value::String("element".to_string())) {
                 let selector = selector_from_value(element);
                 scroll.insert(Value::String("selector".to_string()), selector);
             }
             let dir = m
-                .get(&Value::String("direction".to_string()))
+                .get(Value::String("direction".to_string()))
                 .and_then(|v| v.as_str())
                 .unwrap_or("down");
             scroll.insert(
@@ -388,7 +388,7 @@ impl MaestroMigrator {
                 Value::String(dir.to_string()),
             );
             let max = m
-                .get(&Value::String("maxScrolls".to_string()))
+                .get(Value::String("maxScrolls".to_string()))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(10);
             scroll.insert(
@@ -431,12 +431,12 @@ impl MaestroMigrator {
                 );
             }
             Value::Mapping(m) => {
-                if let Some(dir) = m.get(&Value::String("direction".to_string())) {
+                if let Some(dir) = m.get(Value::String("direction".to_string())) {
                     swipe.insert(Value::String("direction".to_string()), dir.clone());
                 }
                 // Maestro coordinate-based swipes use start/end
-                if m.get(&Value::String("start".to_string())).is_some()
-                    || m.get(&Value::String("end".to_string())).is_some()
+                if m.get(Value::String("start".to_string())).is_some()
+                    || m.get(Value::String("end".to_string())).is_some()
                 {
                     issues.push(MigrationIssue {
                         line,
@@ -445,7 +445,7 @@ impl MaestroMigrator {
                             .to_string(),
                         maestro_construct: "swipe".to_string(),
                     });
-                    if swipe.get(&Value::String("direction".to_string())).is_none() {
+                    if swipe.get(Value::String("direction".to_string())).is_none() {
                         swipe.insert(
                             Value::String("direction".to_string()),
                             Value::String("up".to_string()),
@@ -491,8 +491,8 @@ impl MaestroMigrator {
         let file_path = match value {
             Value::String(s) => s.clone(),
             Value::Mapping(m) => m
-                .get(&Value::String("file".to_string()))
-                .or_else(|| m.get(&Value::String("path".to_string())))
+                .get(Value::String("file".to_string()))
+                .or_else(|| m.get(Value::String("path".to_string())))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown")
                 .to_string(),
@@ -531,7 +531,7 @@ impl MaestroMigrator {
         let key = match value {
             Value::String(s) => s.clone(),
             Value::Mapping(m) => m
-                .get(&Value::String("key".to_string()))
+                .get(Value::String("key".to_string()))
                 .and_then(|v| v.as_str())
                 .unwrap_or("enter")
                 .to_string(),
@@ -565,11 +565,11 @@ fn extract_selector(value: &Value, line: usize, issues: &mut Vec<MigrationIssue>
         }
         Value::Mapping(m) => {
             let mut sel = serde_yaml::Mapping::new();
-            if let Some(id) = m.get(&Value::String("id".to_string())) {
+            if let Some(id) = m.get(Value::String("id".to_string())) {
                 sel.insert(Value::String("id".to_string()), id.clone());
-            } else if let Some(text) = m.get(&Value::String("text".to_string())) {
+            } else if let Some(text) = m.get(Value::String("text".to_string())) {
                 sel.insert(Value::String("text".to_string()), text.clone());
-            } else if let Some(aid) = m.get(&Value::String("accessibilityId".to_string())) {
+            } else if let Some(aid) = m.get(Value::String("accessibilityId".to_string())) {
                 sel.insert(Value::String("accessibilityId".to_string()), aid.clone());
             } else {
                 issues.push(MigrationIssue {
@@ -608,11 +608,11 @@ fn selector_from_value(value: &Value) -> Value {
         }
         Value::Mapping(m) => {
             let mut sel = serde_yaml::Mapping::new();
-            if let Some(id) = m.get(&Value::String("id".to_string())) {
+            if let Some(id) = m.get(Value::String("id".to_string())) {
                 sel.insert(Value::String("id".to_string()), id.clone());
-            } else if let Some(text) = m.get(&Value::String("text".to_string())) {
+            } else if let Some(text) = m.get(Value::String("text".to_string())) {
                 sel.insert(Value::String("text".to_string()), text.clone());
-            } else if let Some(aid) = m.get(&Value::String("accessibilityId".to_string())) {
+            } else if let Some(aid) = m.get(Value::String("accessibilityId".to_string())) {
                 sel.insert(Value::String("accessibilityId".to_string()), aid.clone());
             } else if let Some((k, v)) = m.iter().next() {
                 sel.insert(k.clone(), v.clone());

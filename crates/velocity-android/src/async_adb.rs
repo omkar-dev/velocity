@@ -10,6 +10,12 @@ pub struct AsyncAdb {
     port: u16,
 }
 
+impl Default for AsyncAdb {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AsyncAdb {
     pub fn new() -> Self {
         let host = std::env::var("VELOCITY_ADB_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());

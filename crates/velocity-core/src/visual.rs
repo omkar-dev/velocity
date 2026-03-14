@@ -316,8 +316,8 @@ mod tests {
         let baseline = vec![0u8; 1000];
         let mut actual = vec![0u8; 1000];
         // Change 1% of bytes
-        for i in 0..10 {
-            actual[i] = 255;
+        for item in actual.iter_mut().take(10) {
+            *item = 255;
         }
         let result = compare_images(&baseline, &actual, &[], 0.98).unwrap();
         assert_eq!(result.similarity, 0.99);
