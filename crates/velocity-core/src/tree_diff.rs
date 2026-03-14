@@ -75,11 +75,7 @@ impl TreeDiff {
 
     /// Collect hashes of all direct children of the root.
     fn collect_child_hashes(element: &Element) -> Vec<u64> {
-        element
-            .children
-            .iter()
-            .map(Self::hash_element)
-            .collect()
+        element.children.iter().map(Self::hash_element).collect()
     }
 
     /// Compare a new hierarchy against the previously seen one.
@@ -155,11 +151,7 @@ impl TreeDiff {
 
 /// Count total nodes in an element tree.
 fn count_nodes(element: &Element) -> usize {
-    1 + element
-        .children
-        .iter()
-        .map(count_nodes)
-        .sum::<usize>()
+    1 + element.children.iter().map(count_nodes).sum::<usize>()
 }
 
 #[cfg(test)]
