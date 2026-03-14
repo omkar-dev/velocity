@@ -15,6 +15,12 @@ pub struct IosDriver {
     bootstrap: Mutex<WdaBootstrap>,
 }
 
+impl Default for IosDriver {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IosDriver {
     /// Create a new iOS driver with the default WDA URL (http://localhost:8100).
     pub fn new() -> Self {
@@ -523,11 +529,11 @@ fn element_matches(element: &Element, selector: &Selector, screen: &Rect) -> boo
             element
                 .text
                 .as_ref()
-                .map_or(false, |t| t.contains(sub.as_str()))
+                .is_some_and(|t| t.contains(sub.as_str()))
                 || element
                     .label
                     .as_ref()
-                    .map_or(false, |l| l.contains(sub.as_str()))
+                    .is_some_and(|l| l.contains(sub.as_str()))
         }
         Selector::ClassName(cls) => element.element_type == *cls,
         Selector::Index { .. } => false,

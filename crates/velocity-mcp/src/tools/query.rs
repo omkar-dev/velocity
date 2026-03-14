@@ -4,15 +4,15 @@ use serde_json::Value;
 use velocity_common::{Element, PlatformDriver, Result, Selector, VelocityError};
 
 fn flatten_elements(root: &Element, out: &mut Vec<Value>, filter: Option<&str>) {
-    let matches_filter = filter.map_or(true, |f| {
+    let matches_filter = filter.is_none_or(|f| {
         let f_lower = f.to_lowercase();
         root.label
             .as_deref()
-            .map_or(false, |l| l.to_lowercase().contains(&f_lower))
+            .is_some_and(|l| l.to_lowercase().contains(&f_lower))
             || root
                 .text
                 .as_deref()
-                .map_or(false, |t| t.to_lowercase().contains(&f_lower))
+                .is_some_and(|t| t.to_lowercase().contains(&f_lower))
             || root.element_type.to_lowercase().contains(&f_lower)
     });
 

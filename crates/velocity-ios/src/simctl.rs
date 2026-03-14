@@ -9,6 +9,12 @@ pub struct Simctl {
     xcrun_path: String,
 }
 
+impl Default for Simctl {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Simctl {
     pub fn new() -> Self {
         Self {

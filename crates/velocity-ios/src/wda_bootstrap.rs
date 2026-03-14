@@ -20,6 +20,12 @@ pub struct WdaBootstrap {
     port: u16,
 }
 
+impl Default for WdaBootstrap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WdaBootstrap {
     pub fn new() -> Self {
         let cache_dir = dirs_home().join(".velocity").join("wda");

@@ -169,8 +169,8 @@ impl McpServer {
 
     fn handle_tools_list(&self) -> Result<Value> {
         let tools = self.tool_definitions();
-        Ok(serde_json::to_value(tools)
-            .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Serialization error: {e}")))?)
+        serde_json::to_value(tools)
+            .map_err(|e| VelocityError::Internal(anyhow::anyhow!("Serialization error: {e}")))
     }
 
     async fn handle_tools_call(&mut self, params: &Value) -> Result<Value> {
