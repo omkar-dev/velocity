@@ -257,12 +257,10 @@ impl SyncManager {
             .as_mut()
             .ok_or_else(|| VelocityError::Config("Native sync client not available".to_string()))?;
 
-        if !client.is_connected() {
-            if !client.connect().await {
-                return Err(VelocityError::Config(
-                    "Cannot connect to native sync probe".to_string(),
-                ));
-            }
+        if !client.is_connected() && !client.connect().await {
+            return Err(VelocityError::Config(
+                "Cannot connect to native sync probe".to_string(),
+            ));
         }
 
         let timeout_ms = self.polling_engine.config().timeout_ms;

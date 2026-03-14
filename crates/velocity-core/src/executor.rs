@@ -322,8 +322,7 @@ impl<'a> TestExecutor<'a> {
                         .selector_engine
                         .find_element(self.driver, device_id, selector)
                         .await;
-                    if found.is_ok() {
-                        let element = found.unwrap();
+                    if let Ok(element) = found {
                         if self
                             .driver
                             .is_element_visible(device_id, &element)

@@ -35,6 +35,12 @@ pub struct TreeDiff {
     prev_subtree_hashes: Vec<u64>,
 }
 
+impl Default for TreeDiff {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TreeDiff {
     pub fn new() -> Self {
         Self {
@@ -72,7 +78,7 @@ impl TreeDiff {
         element
             .children
             .iter()
-            .map(|child| Self::hash_element(child))
+            .map(Self::hash_element)
             .collect()
     }
 
@@ -152,7 +158,7 @@ fn count_nodes(element: &Element) -> usize {
     1 + element
         .children
         .iter()
-        .map(|c| count_nodes(c))
+        .map(count_nodes)
         .sum::<usize>()
 }
 
