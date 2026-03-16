@@ -38,9 +38,21 @@ impl IosDriver {
 
     /// Ensure WDA is running before test execution.
     /// Downloads, builds, and launches WDA if needed.
+    /// Also creates a WDA session if one doesn't exist (needed for inspector mode).
     pub async fn prepare(&self, device_id: &str) -> Result<()> {
         let mut bootstrap = self.bootstrap.lock().await;
-        bootstrap.ensure_running(device_id).await
+        bootstrap.ensure_running(device_id).await?;
+        drop(bootstrap);
+
+        // Create a WDA session if one doesn't exist yet.
+        // This enables operations like tap_at, swipe, etc. without requiring
+        // launch_app to be called first (e.g. when using the inspector).
+        let mut wda = self.wda.lock().await;
+        if wda.client().session_id().is_none() {
+            debug!(device_id, "creating default WDA session for inspector");
+            wda.client_mut().create_session("").await?;
+        }
+        Ok(())
     }
 
     /// Stop the WDA process if we started it.

@@ -1,0 +1,378 @@
+:root {
+  --bg: #0f1117;
+  --bg-surface: #1a1d27;
+  --bg-hover: #252833;
+  --border: #2d3040;
+  --text: #e1e3eb;
+  --text-dim: #8b8fa3;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --error: #ef4444;
+  --mono: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100vh;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.device-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.device-picker label {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.device-picker select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.device-picker .hint {
+  color: var(--error);
+  font-size: 12px;
+}
+
+/* Error bar */
+.error-bar {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--error);
+  padding: 8px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Main layout */
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.panel-left {
+  flex: 0 0 60%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  overflow: hidden;
+  position: relative;
+}
+
+.panel-right {
+  flex: 0 0 40%;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Screenshot canvas */
+.screenshot-canvas {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.screenshot-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: crosshair;
+  line-height: 0;
+}
+
+.screenshot-wrapper img {
+  max-width: 100%;
+  max-height: calc(100vh - 50px);
+  display: block;
+  user-select: none;
+}
+
+.screenshot-wrapper .element-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.screenshot-canvas .placeholder {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+/* Element tree */
+.element-tree {
+  flex: 1;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+  min-height: 0;
+}
+
+.element-tree h3,
+.properties-panel h3,
+.selector-display h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 8px 12px 4px;
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+}
+
+.element-tree.empty,
+.properties-panel.empty,
+.selector-display.empty {
+  padding: 16px 12px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.tree-scroll {
+  font-size: 13px;
+}
+
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tree-row:hover {
+  background: var(--bg-hover);
+}
+
+.tree-row.selected {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.toggle {
+  width: 16px;
+  font-size: 10px;
+  color: var(--text-dim);
+  cursor: pointer;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.toggle-spacer {
+  width: 16px;
+  flex-shrink: 0;
+}
+
+.type-badge {
+  background: var(--bg-hover);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.node-label {
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+
+/* Properties panel */
+.properties-panel {
+  border-bottom: 1px solid var(--border);
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.properties-panel table {
+  width: 100%;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.properties-panel td {
+  padding: 3px 12px;
+}
+
+.properties-panel .prop-key {
+  color: var(--text-dim);
+  width: 100px;
+  font-size: 12px;
+}
+
+.properties-panel .mono {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* Selector display */
+.selector-display {
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.selector-value {
+  padding: 4px 12px;
+}
+
+.selector-value code {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.yaml-block {
+  margin: 0 12px 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.yaml-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.copy-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.copy-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.yaml-block pre {
+  padding: 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--text);
+}
+
+/* Action toolbar */
+.action-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.type-action {
+  display: flex;
+  gap: 4px;
+}
+
+.type-action input {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  width: 140px;
+}
+
+.action-toolbar button {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.action-toolbar button:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.action-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.swipe-group {
+  border-left: 1px solid var(--border);
+  padding-left: 8px;
+}

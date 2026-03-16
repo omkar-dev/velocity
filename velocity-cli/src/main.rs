@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use colored::Colorize;
 use tracing_subscriber::EnvFilter;
 
-use commands::{device, mcp, migrate, run, validate};
+use commands::{device, inspect, mcp, migrate, run, validate};
 
 #[derive(Parser)]
 #[command(
@@ -33,6 +33,9 @@ enum Command {
         #[command(subcommand)]
         command: migrate::MigrateCommand,
     },
+
+    /// Launch the visual inspector UI
+    Inspect(inspect::InspectArgs),
 
     /// Start MCP server for AI-driven testing
     Mcp(mcp::McpArgs),
@@ -76,6 +79,7 @@ async fn run_command(cli: Cli) -> anyhow::Result<i32> {
         Command::Run(args) => run::execute(args).await,
         Command::Device { command } => device::execute(command).await,
         Command::Migrate { command } => migrate::execute(command),
+        Command::Inspect(args) => inspect::execute(args).await,
         Command::Mcp(args) => mcp::execute(args).await,
         Command::Validate(args) => validate::execute(args),
         Command::Version => {

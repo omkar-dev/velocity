@@ -1,0 +1,18 @@
+[package]
+name = "velocity-inspector"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Visual inspector Web UI for Velocity mobile testing framework"
+
+[dependencies]
+velocity-common = { path = "../velocity-common" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+axum = { workspace = true }
+tower-http = { workspace = true }
+rust-embed = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+mime_guess = { workspace = true }

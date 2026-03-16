@@ -17,6 +17,7 @@ velocity-core = { path = "../crates/velocity-core" }
 velocity-runner = { path = "../crates/velocity-runner" }
 velocity-mcp = { path = "../crates/velocity-mcp" }
 velocity-migrate = { path = "../crates/velocity-migrate" }
+velocity-inspector = { path = "../crates/velocity-inspector" }
 anyhow = { workspace = true }
 tokio = { workspace = true }
 clap = { workspace = true }

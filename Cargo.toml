@@ -8,6 +8,7 @@ members = [
     "crates/velocity-runner",
     "crates/velocity-mcp",
     "crates/velocity-migrate",
+    "crates/velocity-inspector",
     "velocity-cli",
 ]
 
@@ -36,3 +37,7 @@ colored = "2"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 futures = "0.3"
+axum = { version = "0.8", features = ["ws"] }
+tower-http = { version = "0.6", features = ["cors"] }
+rust-embed = { version = "8" }
+mime_guess = "2"

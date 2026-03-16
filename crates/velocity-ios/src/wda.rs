@@ -108,16 +108,26 @@ impl WdaClient {
     }
 
     /// Create a new WDA session for the given bundle ID.
+    /// If bundle_id is empty, creates a generic session without launching an app
+    /// (useful for inspector mode where the app is already running).
     /// Returns the session ID.
     pub async fn create_session(&mut self, bundle_id: &str) -> Result<String> {
         let url = format!("{}/session", self.base_url);
-        let payload = json!({
-            "capabilities": {
-                "alwaysMatch": {
-                    "bundleId": bundle_id
+        let payload = if bundle_id.is_empty() {
+            json!({
+                "capabilities": {
+                    "alwaysMatch": {}
                 }
-            }
-        });
+            })
+        } else {
+            json!({
+                "capabilities": {
+                    "alwaysMatch": {
+                        "bundleId": bundle_id
+                    }
+                }
+            })
+        };
 
         debug!(bundle_id, "creating WDA session");
 
