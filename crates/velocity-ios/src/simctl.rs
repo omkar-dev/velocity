@@ -157,6 +157,26 @@ impl Simctl {
         Ok(())
     }
 
+    /// Uninstall an app from the simulator, removing all its data.
+    pub async fn uninstall(&self, device_id: &str, bundle_id: &str) -> Result<()> {
+        debug!(device = device_id, bundle = bundle_id, "uninstalling app");
+        self.run_text(&["uninstall", device_id, bundle_id]).await?;
+        Ok(())
+    }
+
+    /// Get the path to an app's data container on the simulator.
+    pub async fn get_app_container(
+        &self,
+        device_id: &str,
+        bundle_id: &str,
+        container: &str,
+    ) -> Result<String> {
+        let output = self
+            .run_text(&["get_app_container", device_id, bundle_id, container])
+            .await?;
+        Ok(output.trim().to_string())
+    }
+
     /// Take a screenshot from the simulator, returning raw PNG bytes.
     /// Uses `xcrun simctl io screenshot -` to pipe output to stdout.
     pub async fn screenshot(&self, device_id: &str) -> Result<Vec<u8>> {

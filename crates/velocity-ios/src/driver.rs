@@ -275,6 +275,25 @@ impl PlatformDriver for IosDriver {
     async fn launch_app(&self, device_id: &str, app_id: &str, clear_state: bool) -> Result<()> {
         if clear_state {
             let _ = self.simctl.terminate(device_id, app_id).await;
+
+            // Clear the app's data container (AsyncStorage, NSUserDefaults, caches, etc.)
+            match self
+                .simctl
+                .get_app_container(device_id, app_id, "data")
+                .await
+            {
+                Ok(data_path) => {
+                    debug!(path = %data_path, "clearing app data container");
+                    for subdir in &["Library", "Documents", "tmp"] {
+                        let dir = format!("{}/{}", data_path, subdir);
+                        let _ = tokio::fs::remove_dir_all(&dir).await;
+                        let _ = tokio::fs::create_dir_all(&dir).await;
+                    }
+                }
+                Err(e) => {
+                    warn!(error = %e, "could not resolve app data container, skipping clear");
+                }
+            }
         }
 
         // Ensure WDA session
