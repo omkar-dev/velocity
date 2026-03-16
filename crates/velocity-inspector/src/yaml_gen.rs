@@ -29,10 +29,13 @@ fn selector_to_yaml(selector: &Selector) -> String {
         Selector::AccessibilityId(aid) => format!("accessibilityId: {aid:?}"),
         Selector::ClassName(cls) => format!("className: {cls:?}"),
         Selector::Index { selector, index } => {
-            format!("index:\n      selector:\n        {}\n      index: {index}", selector_to_yaml(selector))
+            format!(
+                "index:\n      selector:\n        {}\n      index: {index}",
+                selector_to_yaml(selector)
+            )
         }
         Selector::Compound(selectors) => {
-            let parts: Vec<String> = selectors.iter().map(|s| selector_to_yaml(s)).collect();
+            let parts: Vec<String> = selectors.iter().map(selector_to_yaml).collect();
             format!("compound:\n      {}", parts.join("\n      "))
         }
     }
