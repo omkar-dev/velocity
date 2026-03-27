@@ -2,6 +2,7 @@ pub mod config;
 pub mod error;
 pub mod resilience;
 pub mod result;
+pub mod selector_match;
 pub mod test_types;
 pub mod traits;
 pub mod types;

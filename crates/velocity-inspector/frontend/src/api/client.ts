@@ -62,3 +62,16 @@ export async function generateSelector(element: Element): Promise<GenerateRespon
     body: JSON.stringify({ element }),
   });
 }
+
+export async function saveFlow(
+  name: string,
+  appId: string,
+  steps: string[],
+  path?: string
+): Promise<{ path: string; yaml: string }> {
+  return json(`${BASE}/flow/save`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, app_id: appId, steps, path }),
+  });
+}

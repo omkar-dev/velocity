@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::types::{DeviceInfo, Direction, Element, Key, Selector};
+use crate::VelocityError;
 
 /// Health status of a platform driver connection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -61,4 +62,16 @@ pub trait PlatformDriver: Send + Sync {
     // Element state
     async fn get_element_text(&self, device_id: &str, element: &Element) -> Result<String>;
     async fn is_element_visible(&self, device_id: &str, element: &Element) -> Result<bool>;
+
+    // Resource profiling (opt-in, Android-only for now)
+    // Returns (java_heap_kb, native_heap_kb, total_pss_kb, cpu_percent)
+    async fn collect_resource_metrics(
+        &self,
+        _device_id: &str,
+        _package: &str,
+    ) -> Result<(u64, u64, u64, f32)> {
+        Err(VelocityError::Config(
+            "Resource profiling not available on this platform".into(),
+        ))
+    }
 }

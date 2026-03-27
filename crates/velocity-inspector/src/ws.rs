@@ -56,6 +56,24 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>, device_id: S
                         let _ = socket.send(Message::Text(err_msg.to_string().into())).await;
                     }
                 }
+
+                // Push performance metrics if app_id is set (opt-in, no overhead when None)
+                if let Some(app_id) = state.app_id().await {
+                    if let Ok((java, native, pss, cpu)) =
+                        state.driver.collect_resource_metrics(&device_id, &app_id).await
+                    {
+                        let perf_msg = serde_json::json!({
+                            "type": "performance",
+                            "javaHeapKb": java,
+                            "nativeHeapKb": native,
+                            "totalPssKb": pss,
+                            "cpuPercent": cpu,
+                        });
+                        if socket.send(Message::Text(perf_msg.to_string().into())).await.is_err() {
+                            break;
+                        }
+                    }
+                }
             }
 
             msg = socket.recv() => {

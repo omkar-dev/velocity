@@ -1,5 +1,6 @@
 pub mod device;
 pub mod inspect;
+pub mod lint;
 pub mod mcp;
 pub mod migrate;
 pub mod run;

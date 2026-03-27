@@ -19,6 +19,12 @@ pub struct McpSession {
 
     /// Cache TTL for device list queries.
     cache_ttl: Duration,
+
+    /// Port the inspector is running on, if started.
+    pub inspector_port: Option<u16>,
+
+    /// Handle to the inspector background task.
+    pub inspector_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl McpSession {
@@ -29,6 +35,8 @@ impl McpSession {
             last_screenshot: None,
             config_path,
             cache_ttl: Duration::from_secs(30),
+            inspector_port: None,
+            inspector_handle: None,
         }
     }
 

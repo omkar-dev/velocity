@@ -1,13 +1,23 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use velocity_common::{Result, TestResult, VelocityError};
+use velocity_common::{ResourceSnapshot, Result, TestResult, VelocityError};
 
 const HISTORY_FILENAME: &str = "velocity-history.json";
+
+/// Historical resource baseline for a test.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceBaseline {
+    pub peak_pss_kb: u64,
+    pub peak_java_heap_kb: u64,
+    pub avg_cpu_percent: f32,
+}
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct TestHistory {
     pub durations: HashMap<String, u64>,
+    #[serde(default)]
+    pub resource_baselines: HashMap<String, ResourceBaseline>,
 }
 
 /// Load test history from a JSON file at the given directory path.
@@ -68,6 +78,40 @@ pub fn update(history: &mut TestHistory, results: &[TestResult]) {
         history
             .durations
             .insert(result.test_name.clone(), duration_ms);
+
+        // Update resource baselines if profiling data is present
+        if let Some(ref peak) = result.resource_peak {
+            history.resource_baselines.insert(
+                result.test_name.clone(),
+                ResourceBaseline {
+                    peak_pss_kb: peak.total_pss_kb,
+                    peak_java_heap_kb: peak.java_heap_kb,
+                    avg_cpu_percent: peak.cpu_percent,
+                },
+            );
+        }
+    }
+}
+
+/// Check if current metrics exceed historical baseline by the given threshold.
+/// Returns a warning message if regression detected, None otherwise.
+pub fn check_regression(
+    baseline: &ResourceBaseline,
+    current_peak: &ResourceSnapshot,
+    threshold_pct: u32,
+) -> Option<String> {
+    if baseline.peak_pss_kb == 0 {
+        return None;
+    }
+    let growth_pct =
+        ((current_peak.total_pss_kb as f64 / baseline.peak_pss_kb as f64) - 1.0) * 100.0;
+    if growth_pct > threshold_pct as f64 {
+        Some(format!(
+            "PSS grew {growth_pct:.1}% vs baseline ({}KB -> {}KB)",
+            baseline.peak_pss_kb, current_peak.total_pss_kb
+        ))
+    } else {
+        None
     }
 }
 
@@ -86,6 +130,7 @@ mod tests {
             retries: 0,
             error_message: None,
             screenshots: vec![],
+            resource_peak: None,
         }
     }
 

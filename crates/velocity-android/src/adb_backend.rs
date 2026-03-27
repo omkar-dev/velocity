@@ -27,6 +27,14 @@ pub trait AdbBackend: Send + Sync {
     async fn screen_size(&self, device_id: &str) -> Result<(i32, i32)>;
     async fn run_device(&self, device_id: &str, args: &[&str]) -> Result<String>;
     async fn batch_shell(&self, device_id: &str, commands: &[&str]) -> Result<String>;
+
+    /// Collect resource metrics (heap, PSS, CPU) for a package.
+    /// Returns (java_heap_kb, native_heap_kb, total_pss_kb, cpu_percent).
+    async fn collect_resource_metrics(
+        &self,
+        device_id: &str,
+        package: &str,
+    ) -> Result<(u64, u64, u64, f32)>;
 }
 
 // ── Implement AdbBackend for the subprocess Adb ──
@@ -86,6 +94,13 @@ impl AdbBackend for crate::adb::Adb {
     async fn batch_shell(&self, device_id: &str, commands: &[&str]) -> Result<String> {
         self.batch_shell(device_id, commands).await
     }
+    async fn collect_resource_metrics(
+        &self,
+        device_id: &str,
+        package: &str,
+    ) -> Result<(u64, u64, u64, f32)> {
+        self.collect_resource_metrics(device_id, package).await
+    }
 }
 
 // ── Implement AdbBackend for the async TCP client ──
@@ -144,5 +159,12 @@ impl AdbBackend for crate::async_adb::AsyncAdb {
     }
     async fn batch_shell(&self, device_id: &str, commands: &[&str]) -> Result<String> {
         self.batch_shell(device_id, commands).await
+    }
+    async fn collect_resource_metrics(
+        &self,
+        device_id: &str,
+        package: &str,
+    ) -> Result<(u64, u64, u64, f32)> {
+        self.collect_resource_metrics(device_id, package).await
     }
 }

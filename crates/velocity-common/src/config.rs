@@ -9,6 +9,40 @@ pub enum ReportFormat {
     Json,
 }
 
+/// Driver mode — how tests are executed.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DriverMode {
+    /// Execute against a real emulator/simulator/device.
+    #[default]
+    Device,
+    /// CPU-only headless rendering (no emulator needed).
+    Headless,
+}
+
+/// Detected app framework.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum Framework {
+    /// Native iOS/Android (UIKit, Storyboard, Android XML).
+    #[default]
+    Native,
+    /// React Native (JS bundle + bridge).
+    ReactNative,
+    /// Flutter (Dart + RenderObject tree).
+    Flutter,
+}
+
+impl std::fmt::Display for Framework {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Native => write!(f, "native"),
+            Self::ReactNative => write!(f, "react_native"),
+            Self::Flutter => write!(f, "flutter"),
+        }
+    }
+}
+
 /// Runtime configuration merged from CLI args and config file.
 #[derive(Debug, Clone)]
 pub struct RuntimeConfig {
@@ -25,6 +59,9 @@ pub struct RuntimeConfig {
     pub suite_timeout_ms: Option<u64>,
     pub fail_fast: bool,
     pub env_overrides: Vec<(String, String)>,
+    pub driver_mode: DriverMode,
+    pub framework: Framework,
+    pub update_baselines: bool,
 }
 
 impl Default for RuntimeConfig {
@@ -43,6 +80,9 @@ impl Default for RuntimeConfig {
             suite_timeout_ms: None,
             fail_fast: false,
             env_overrides: Vec::new(),
+            driver_mode: DriverMode::default(),
+            framework: Framework::default(),
+            update_baselines: false,
         }
     }
 }

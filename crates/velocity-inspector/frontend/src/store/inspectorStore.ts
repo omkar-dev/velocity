@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { DeviceInfo, Element, GenerateResponse } from "../api/types";
+import type { DeviceInfo, Element, GenerateResponse, PerfSample, RecordedStep } from "../api/types";
 
 interface InspectorState {
   // Device
@@ -23,6 +23,20 @@ interface InspectorState {
   // Selector generation
   generated: GenerateResponse | null;
   setGenerated: (gen: GenerateResponse | null) => void;
+
+  // Recording
+  isRecording: boolean;
+  recordedSteps: RecordedStep[];
+  startRecording: () => void;
+  stopRecording: () => void;
+  addRecordedStep: (step: RecordedStep) => void;
+  removeRecordedStep: (index: number) => void;
+  clearRecordedSteps: () => void;
+
+  // Performance
+  perfHistory: PerfSample[];
+  addPerfSample: (sample: PerfSample) => void;
+  clearPerfHistory: () => void;
 
   // Loading / errors
   loading: boolean;
@@ -48,6 +62,27 @@ export const useInspectorStore = create<InspectorState>((set) => ({
 
   generated: null,
   setGenerated: (gen) => set({ generated: gen }),
+
+  // Recording
+  isRecording: false,
+  recordedSteps: [],
+  startRecording: () => set({ isRecording: true, recordedSteps: [] }),
+  stopRecording: () => set({ isRecording: false }),
+  addRecordedStep: (step) =>
+    set((state) => ({ recordedSteps: [...state.recordedSteps, step] })),
+  removeRecordedStep: (index) =>
+    set((state) => ({
+      recordedSteps: state.recordedSteps.filter((_, i) => i !== index),
+    })),
+  clearRecordedSteps: () => set({ recordedSteps: [] }),
+
+  // Performance (rolling 60-sample window)
+  perfHistory: [],
+  addPerfSample: (sample) =>
+    set((state) => ({
+      perfHistory: [...state.perfHistory, sample].slice(-60),
+    })),
+  clearPerfHistory: () => set({ perfHistory: [] }),
 
   loading: false,
   setLoading: (loading) => set({ loading }),

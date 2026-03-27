@@ -2,29 +2,42 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use velocity_common::{
-    Action, Direction, PlatformDriver, Result, Step, StepResult, StepStatus, SuiteConfig, TestCase,
-    TestResult, TestStatus, VelocityError,
+    Action, Direction, Platform, PlatformDriver, Result, Step, StepResult, StepStatus, SuiteConfig,
+    TestCase, TestResult, TestStatus, VelocityError,
 };
 
+use crate::dialog_handler::DialogHandler;
+use crate::native_sync::SyncManager;
+use crate::profiler::ResourceProfiler;
 use crate::selector::SelectorEngine;
-use crate::sync::AdaptiveSyncEngine;
 
 pub struct TestExecutor<'a> {
     driver: &'a dyn PlatformDriver,
-    sync_engine: AdaptiveSyncEngine,
+    sync_manager: SyncManager,
     selector_engine: SelectorEngine,
+    dialog_handler: DialogHandler,
     config: SuiteConfig,
+    profiler: Option<ResourceProfiler>,
 }
 
 impl<'a> TestExecutor<'a> {
-    pub fn new(driver: &'a dyn PlatformDriver, config: SuiteConfig) -> Self {
-        let sync_engine = AdaptiveSyncEngine::new(config.sync.clone());
-        let selector_engine = SelectorEngine::new();
+    pub fn new(driver: &'a dyn PlatformDriver, config: SuiteConfig, app_id: &str) -> Self {
+        let platform = config.platform.unwrap_or(Platform::Ios);
+        let sync_manager = SyncManager::new(&config.sync, platform);
+        let selector_engine = SelectorEngine::with_healing(config.healing.clone());
+        let dialog_handler = DialogHandler::new(config.dialog.clone());
+        let profiler = if config.performance.enabled {
+            Some(ResourceProfiler::new(app_id.to_string()))
+        } else {
+            None
+        };
         Self {
             driver,
-            sync_engine,
+            sync_manager,
             selector_engine,
+            dialog_handler,
             config,
+            profiler,
         }
     }
 
@@ -59,6 +72,7 @@ impl<'a> TestExecutor<'a> {
                                 duration: Duration::ZERO,
                                 screenshot: None,
                                 error_message: None,
+                                resource_delta: None,
                             });
                         }
                         break;
@@ -86,6 +100,7 @@ impl<'a> TestExecutor<'a> {
                         duration: test_start.elapsed(),
                         screenshot,
                         error_message: Some(error_msg),
+                        resource_delta: None,
                     });
 
                     // Mark remaining steps as skipped
@@ -97,6 +112,7 @@ impl<'a> TestExecutor<'a> {
                             duration: Duration::ZERO,
                             screenshot: None,
                             error_message: None,
+                            resource_delta: None,
                         });
                     }
                     break;
@@ -111,6 +127,8 @@ impl<'a> TestExecutor<'a> {
             TestStatus::Failed
         };
 
+        let resource_peak = self.profiler.as_ref().and_then(|p| p.peak()).cloned();
+
         Ok(TestResult {
             test_name: test.name.clone(),
             status,
@@ -119,6 +137,7 @@ impl<'a> TestExecutor<'a> {
             retries: 0,
             error_message: test_error,
             screenshots,
+            resource_peak,
         })
     }
 
@@ -132,12 +151,41 @@ impl<'a> TestExecutor<'a> {
         let step_start = Instant::now();
         let name = action_name(&step.action);
 
-        // Pre-action sync (skip for wait and screenshot actions)
-        let skip_sync = matches!(step.action, Action::Wait { .. } | Action::Screenshot { .. });
+        // Pre-action sync (skip for wait, screenshot, and app lifecycle actions)
+        let skip_sync = matches!(
+            step.action,
+            Action::Wait { .. }
+                | Action::Screenshot { .. }
+                | Action::LaunchApp { .. }
+                | Action::StopApp { .. }
+        );
         if !skip_sync {
-            self.sync_engine
-                .wait_for_idle(self.driver, device_id)
-                .await?;
+            // Dismiss any system dialogs before waiting for idle
+            self.dialog_handler
+                .dismiss_if_present(self.driver, device_id)
+                .await;
+
+            // Collect pre-action metrics concurrently with sync (zero added latency)
+            let sync_mgr = &mut self.sync_manager;
+            let driver = self.driver;
+            let pkg = self.profiler.as_ref().map(|p| p.package().to_string());
+
+            let snap_fut = async {
+                match &pkg {
+                    Some(pkg) => driver.collect_resource_metrics(device_id, pkg).await.ok(),
+                    None => None,
+                }
+            };
+
+            let (sync_result, raw_before) = tokio::join!(
+                sync_mgr.wait_for_idle(driver, device_id),
+                snap_fut
+            );
+            sync_result?;
+
+            if let (Some(profiler), Some(raw)) = (self.profiler.as_mut(), raw_before) {
+                profiler.record_before(ResourceProfiler::snapshot_from_raw(raw));
+            }
         }
 
         let result = self.execute_action(&step.action, device_id, app_id).await;
@@ -157,12 +205,41 @@ impl<'a> TestExecutor<'a> {
                 | Action::StopApp { .. }
         );
 
+        let mut resource_delta = None;
+
         match result {
             Ok(()) => {
                 if mutating {
                     self.selector_engine.invalidate_cache();
-                    // Best-effort post-action sync; ignore timeout since the UI may still be settling
-                    let _ = self.sync_engine.wait_for_idle(self.driver, device_id).await;
+                    self.sync_manager.invalidate();
+
+                    // Collect post-action metrics concurrently with sync
+                    let sync_mgr = &mut self.sync_manager;
+                    let driver = self.driver;
+                    let pkg = self.profiler.as_ref().map(|p| p.package().to_string());
+
+                    let snap_fut = async {
+                        match &pkg {
+                            Some(pkg) => driver.collect_resource_metrics(device_id, pkg).await.ok(),
+                            None => None,
+                        }
+                    };
+
+                    let (sync_result, raw_after) = tokio::join!(
+                        sync_mgr.wait_for_idle(driver, device_id),
+                        snap_fut
+                    );
+                    // Best-effort: ignore sync timeout
+                    let _ = sync_result;
+
+                    if let (Some(profiler), Some(raw)) = (self.profiler.as_mut(), raw_after) {
+                        resource_delta = profiler.record_after(ResourceProfiler::snapshot_from_raw(raw));
+                    }
+
+                    // Check for system dialogs that may have appeared after the action
+                    self.dialog_handler
+                        .dismiss_if_present(self.driver, device_id)
+                        .await;
                 }
                 Ok(StepResult {
                     step_index,
@@ -171,6 +248,7 @@ impl<'a> TestExecutor<'a> {
                     duration: step_start.elapsed(),
                     screenshot: None,
                     error_message: None,
+                    resource_delta,
                 })
             }
             Err(e) => {
@@ -187,6 +265,7 @@ impl<'a> TestExecutor<'a> {
                     duration: step_start.elapsed(),
                     screenshot,
                     error_message: Some(e.to_string()),
+                    resource_delta: None,
                 })
             }
         }
@@ -334,7 +413,7 @@ impl<'a> TestExecutor<'a> {
                     }
                     self.selector_engine.invalidate_cache();
                     self.driver.swipe(device_id, *direction).await?;
-                    let _ = self.sync_engine.wait_for_idle(self.driver, device_id).await;
+                    let _ = self.sync_manager.wait_for_idle(self.driver, device_id).await;
                 }
                 Err(VelocityError::ElementNotFound {
                     selector: format!("{selector}"),

@@ -1,7 +1,9 @@
 import { ActionToolbar } from "./components/ActionToolbar";
 import { DevicePicker } from "./components/DevicePicker";
 import { ElementTree } from "./components/ElementTree";
+import { PerformanceChart } from "./components/PerformanceChart";
 import { PropertiesPanel } from "./components/PropertiesPanel";
+import { RecordingPanel } from "./components/RecordingPanel";
 import { ScreenshotCanvas } from "./components/ScreenshotCanvas";
 import { SelectorDisplay } from "./components/SelectorDisplay";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -9,7 +11,8 @@ import { useInspectorStore } from "./store/inspectorStore";
 
 export default function App() {
   useWebSocket();
-  const { error, setError } = useInspectorStore();
+  const { error, setError, isRecording, recordedSteps } = useInspectorStore();
+  const showRecording = isRecording || recordedSteps.length > 0;
 
   return (
     <div className="app">
@@ -30,11 +33,13 @@ export default function App() {
       <main className="app-main">
         <section className="panel-left">
           <ScreenshotCanvas />
+          <PerformanceChart />
         </section>
-        <section className="panel-right">
+        <section className={`panel-right ${showRecording ? "with-recording" : ""}`}>
           <ElementTree />
           <PropertiesPanel />
           <SelectorDisplay />
+          <RecordingPanel />
         </section>
       </main>
     </div>

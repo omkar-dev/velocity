@@ -8,6 +8,7 @@ description = "MCP server for Velocity: AI-accessible mobile automation tools"
 [dependencies]
 velocity-common = { path = "../velocity-common" }
 velocity-core = { path = "../velocity-core" }
+velocity-inspector = { path = "../velocity-inspector" }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

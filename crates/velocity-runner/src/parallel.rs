@@ -81,6 +81,7 @@ impl ParallelRunner {
                             retries: 0,
                             error_message: Some("Skipped due to --fail-fast".to_string()),
                             screenshots: vec![],
+                            resource_peak: None,
                         };
                     }
 
@@ -95,6 +96,7 @@ impl ParallelRunner {
                                 retries: 0,
                                 error_message: Some(format!("Failed to acquire device: {e}")),
                                 screenshots: vec![],
+                                resource_peak: None,
                             };
                         }
                     };
@@ -199,7 +201,7 @@ async fn run_test_with_retries(
     max_retries: u32,
 ) -> TestResult {
     let test_start = Instant::now();
-    let mut executor = TestExecutor::new(driver, suite_config.clone());
+    let mut executor = TestExecutor::new(driver, suite_config.clone(), app_id);
 
     let mut last_result = match executor.execute_test(test, device_id, app_id).await {
         Ok(r) => r,
@@ -211,6 +213,7 @@ async fn run_test_with_retries(
             retries: 0,
             error_message: Some(e.to_string()),
             screenshots: vec![],
+            resource_peak: None,
         },
     };
 
@@ -227,6 +230,7 @@ async fn run_test_with_retries(
                 retries: attempts,
                 error_message: Some(e.to_string()),
                 screenshots: vec![],
+                resource_peak: None,
             },
         };
     }

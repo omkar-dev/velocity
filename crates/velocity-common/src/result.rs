@@ -3,6 +3,26 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+/// Resource metrics captured at a point in time.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceSnapshot {
+    pub java_heap_kb: u64,
+    pub native_heap_kb: u64,
+    pub total_pss_kb: u64,
+    pub cpu_percent: f32,
+    pub timestamp_ms: u64,
+}
+
+/// Resource delta comparing before/after metrics for a step.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceDelta {
+    pub before: ResourceSnapshot,
+    pub after: ResourceSnapshot,
+    pub heap_growth_kb: i64,
+}
+
 /// The result of executing a single step.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StepResult {
@@ -12,6 +32,8 @@ pub struct StepResult {
     pub duration: Duration,
     pub screenshot: Option<PathBuf>,
     pub error_message: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_delta: Option<ResourceDelta>,
 }
 
 /// Status of a single step.
@@ -33,6 +55,8 @@ pub struct TestResult {
     pub retries: u32,
     pub error_message: Option<String>,
     pub screenshots: Vec<PathBuf>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_peak: Option<ResourceSnapshot>,
 }
 
 /// Status of a test case.

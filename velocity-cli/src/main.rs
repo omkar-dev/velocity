@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 use colored::Colorize;
 use tracing_subscriber::EnvFilter;
 
-use commands::{device, inspect, mcp, migrate, run, validate};
+use commands::{device, inspect, lint, mcp, migrate, run, validate};
 
 #[derive(Parser)]
 #[command(
@@ -42,6 +42,9 @@ enum Command {
 
     /// Validate a test configuration file
     Validate(validate::ValidateArgs),
+
+    /// Lint selectors for fragile or problematic patterns
+    Lint(lint::LintArgs),
 
     /// Print version information
     Version,
@@ -82,6 +85,7 @@ async fn run_command(cli: Cli) -> anyhow::Result<i32> {
         Command::Inspect(args) => inspect::execute(args).await,
         Command::Mcp(args) => mcp::execute(args).await,
         Command::Validate(args) => validate::execute(args),
+        Command::Lint(args) => lint::execute(args),
         Command::Version => {
             println!("{} {}", "velocity".bold(), env!("CARGO_PKG_VERSION"));
             Ok(0)

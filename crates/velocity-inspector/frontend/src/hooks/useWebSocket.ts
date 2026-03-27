@@ -3,7 +3,7 @@ import { InspectorSocket } from "../api/websocket";
 import { useInspectorStore } from "../store/inspectorStore";
 
 export function useWebSocket() {
-  const { currentDeviceId, setScreenshotUrl, setHierarchy, setError } =
+  const { currentDeviceId, setScreenshotUrl, setHierarchy, setError, addPerfSample } =
     useInspectorStore();
   const socketRef = useRef<InspectorSocket | null>(null);
 
@@ -21,6 +21,22 @@ export function useWebSocket() {
         case "hierarchy":
           if (msg.root) setHierarchy(msg.root);
           break;
+        case "performance":
+          if (
+            msg.javaHeapKb != null &&
+            msg.nativeHeapKb != null &&
+            msg.totalPssKb != null &&
+            msg.cpuPercent != null
+          ) {
+            addPerfSample({
+              timestamp: Date.now(),
+              javaHeapKb: msg.javaHeapKb,
+              nativeHeapKb: msg.nativeHeapKb,
+              totalPssKb: msg.totalPssKb,
+              cpuPercent: msg.cpuPercent,
+            });
+          }
+          break;
         case "error":
           if (msg.message) setError(msg.message);
           break;
@@ -33,7 +49,7 @@ export function useWebSocket() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [currentDeviceId, setScreenshotUrl, setHierarchy, setError]);
+  }, [currentDeviceId, setScreenshotUrl, setHierarchy, setError, addPerfSample]);
 
   return socketRef;
 }

@@ -8,7 +8,7 @@ use velocity_common::{PlatformDriver, Result, VelocityError};
 
 use crate::session::McpSession;
 use crate::tool_registry::ToolDefinition;
-use crate::tools::{device, flow, interaction, query};
+use crate::tools::{device, flow, inspector, interaction, query};
 
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
@@ -206,11 +206,15 @@ impl McpServer {
             "list_elements" => query::list_elements(&self.driver, &device_id, &arguments).await,
             "get_element" => query::get_element(&self.driver, &device_id, &arguments).await,
             "assert_visible" => query::assert_visible(&self.driver, &device_id, &arguments).await,
+            "get_screen_summary" => query::get_screen_summary(&self.driver, &device_id, &arguments).await,
+            "wait_for_element" => query::wait_for_element(&self.driver, &device_id, &arguments).await,
             "list_flows" => flow::list_flows(&config_path, &arguments),
             "run_flow" => flow::run_flow(&self.driver, &device_id, &config_path, &arguments).await,
             "list_tests" => flow::list_tests(&config_path, &arguments),
             "run_test" => flow::run_test(&self.driver, &device_id, &config_path, &arguments).await,
             "generate_test_skeleton" => flow::generate_test_skeleton(&arguments),
+            "open_inspector" => inspector::open_inspector(&self.driver, &device_id, &mut self.session, &arguments).await,
+            "close_inspector" => inspector::close_inspector(&mut self.session, &arguments).await,
             other => Err(VelocityError::Internal(anyhow::anyhow!(
                 "Unknown tool: {other}"
             ))),
@@ -347,6 +351,36 @@ impl McpServer {
                 }),
             },
             ToolDefinition {
+                name: "get_screen_summary".to_string(),
+                description: "Get a concise, LLM-friendly summary of what's currently on screen. Returns screen title, visible text, interactive elements, and navigation state. Much more token-efficient than list_elements.".to_string(),
+                input_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {}
+                }),
+            },
+            ToolDefinition {
+                name: "wait_for_element".to_string(),
+                description: "Wait for an element matching the selector to become visible. Blocks until found or timeout. More efficient than polling list_elements.".to_string(),
+                input_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "selector": {
+                            "type": "object",
+                            "description": "Selector to wait for (e.g. {\"text\": \"Welcome\"} or {\"id\": \"home_screen\"})"
+                        },
+                        "timeout_ms": {
+                            "type": "integer",
+                            "description": "Maximum wait time in milliseconds (default: 10000, max: 30000)"
+                        },
+                        "poll_interval_ms": {
+                            "type": "integer",
+                            "description": "Polling interval in milliseconds (default: 500, min: 100)"
+                        }
+                    },
+                    "required": ["selector"]
+                }),
+            },
+            ToolDefinition {
                 name: "list_flows".to_string(),
                 description: "List available flows from the test config".to_string(),
                 input_schema: serde_json::json!({
@@ -406,6 +440,27 @@ impl McpServer {
                         }
                     },
                     "required": ["description"]
+                }),
+            },
+            ToolDefinition {
+                name: "open_inspector".to_string(),
+                description: "Launch the visual Inspector web UI for debugging. Shares the same device connection. Returns the URL to open. Idempotent — calling again returns the existing URL.".to_string(),
+                input_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "port": {
+                            "type": "integer",
+                            "description": "Port to run the inspector on (default: 9876). Auto-increments if busy."
+                        }
+                    }
+                }),
+            },
+            ToolDefinition {
+                name: "close_inspector".to_string(),
+                description: "Stop the Inspector web UI if running.".to_string(),
+                input_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {}
                 }),
             },
         ]

@@ -50,7 +50,7 @@ pub async fn run_flow(
         })?;
 
     let app_id = &suite.app_id;
-    let mut executor = TestExecutor::new(driver.as_ref(), suite.config.clone());
+    let mut executor = TestExecutor::new(driver.as_ref(), suite.config.clone(), &suite.app_id);
     let mut results = Vec::new();
     for (i, step) in flow.steps.iter().enumerate() {
         match executor.execute_step(step, device_id, app_id, i).await {
@@ -123,7 +123,7 @@ pub async fn run_test(
         .ok_or_else(|| VelocityError::Config(format!("Test '{test_name}' not found in suite")))?;
 
     let app_id = &suite.app_id;
-    let mut executor = TestExecutor::new(driver.as_ref(), suite.config.clone());
+    let mut executor = TestExecutor::new(driver.as_ref(), suite.config.clone(), &suite.app_id);
     let result = executor.execute_test(test, device_id, app_id).await?;
 
     Ok(serde_json::json!({

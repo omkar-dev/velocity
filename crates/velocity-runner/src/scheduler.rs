@@ -278,7 +278,10 @@ mod tests {
         durations.insert("fast1".to_string(), 1000);
         durations.insert("fast2".to_string(), 1000);
 
-        let history = TestHistory { durations };
+        let history = TestHistory {
+            durations,
+            resource_baselines: Default::default(),
+        };
 
         let shard0 = shard_tests(tests.clone(), 0, 2, Some(&history));
         let shard1 = shard_tests(tests.clone(), 1, 2, Some(&history));

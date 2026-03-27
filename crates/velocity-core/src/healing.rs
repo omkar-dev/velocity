@@ -83,7 +83,7 @@ pub struct SelectorHealer {
     healed_mappings: Mutex<Vec<HealedMapping>>,
 }
 
-/// Snapshot of an element's attributes for future healing reference.
+/// Snapshot of an element's attributes plus surrounding context for fingerprinting.
 #[derive(Debug, Clone)]
 struct ElementSnapshot {
     #[allow(dead_code)]
@@ -92,6 +92,25 @@ struct ElementSnapshot {
     text: Option<String>,
     element_type: String,
     bounds: Rect,
+    /// Contextual fingerprint: parent type and sibling labels for structural matching.
+    fingerprint: ElementFingerprint,
+}
+
+/// Captures structural context around an element for resilient matching.
+/// Even if text/ID changes, position within the tree often stays stable.
+#[derive(Debug, Clone, Default)]
+struct ElementFingerprint {
+    /// Parent element type (e.g., "Cell", "ScrollView").
+    parent_type: Option<String>,
+    /// Parent accessibility label.
+    parent_label: Option<String>,
+    /// Sibling element types (sorted for stable comparison).
+    sibling_types: Vec<String>,
+    /// Sibling labels/text (sorted, up to 5 nearest).
+    #[allow(dead_code)]
+    sibling_labels: Vec<String>,
+    /// Index among siblings of the same type.
+    type_index: Option<usize>,
 }
 
 impl From<&Element> for ElementSnapshot {
@@ -102,8 +121,80 @@ impl From<&Element> for ElementSnapshot {
             text: el.text.clone(),
             element_type: el.element_type.clone(),
             bounds: el.bounds,
+            fingerprint: ElementFingerprint::default(),
         }
     }
+}
+
+impl ElementSnapshot {
+    /// Create a snapshot with structural context extracted from the hierarchy.
+    fn with_context(element: &Element, hierarchy: &Element) -> Self {
+        let fingerprint = extract_fingerprint(element, hierarchy);
+        Self {
+            platform_id: element.platform_id.clone(),
+            label: element.label.clone(),
+            text: element.text.clone(),
+            element_type: element.element_type.clone(),
+            bounds: element.bounds,
+            fingerprint,
+        }
+    }
+}
+
+/// Extract fingerprint by finding the element's parent and siblings in the hierarchy.
+fn extract_fingerprint(target: &Element, root: &Element) -> ElementFingerprint {
+    if let Some((parent, siblings)) = find_parent_and_siblings(target, root) {
+        let mut sibling_types: Vec<String> = siblings
+            .iter()
+            .map(|s| s.element_type.clone())
+            .collect();
+        sibling_types.sort();
+
+        let mut sibling_labels: Vec<String> = siblings
+            .iter()
+            .filter_map(|s| s.label.clone().or_else(|| s.text.clone()))
+            .take(5)
+            .collect();
+        sibling_labels.sort();
+
+        let type_index = siblings
+            .iter()
+            .filter(|s| s.element_type == target.element_type)
+            .position(|s| s.platform_id == target.platform_id || s.bounds == target.bounds);
+
+        ElementFingerprint {
+            parent_type: Some(parent.element_type.clone()),
+            parent_label: parent.label.clone(),
+            sibling_types,
+            sibling_labels,
+            type_index,
+        }
+    } else {
+        ElementFingerprint::default()
+    }
+}
+
+/// Walk the tree to find the parent of a target element and its siblings.
+fn find_parent_and_siblings<'a>(
+    target: &Element,
+    current: &'a Element,
+) -> Option<(&'a Element, Vec<&'a Element>)> {
+    for child in &current.children {
+        // Check if this child matches the target
+        if child.platform_id == target.platform_id && child.bounds == target.bounds {
+            let siblings: Vec<&Element> = current
+                .children
+                .iter()
+                .filter(|c| !(c.platform_id == target.platform_id && c.bounds == target.bounds))
+                .collect();
+            return Some((current, siblings));
+        }
+        // Recurse
+        if let Some(found) = find_parent_and_siblings(target, child) {
+            return Some(found);
+        }
+    }
+    None
 }
 
 impl SelectorHealer {
@@ -123,6 +214,22 @@ impl SelectorHealer {
         let key = format!("{selector}");
         if let Ok(mut known) = self.known_elements.lock() {
             known.insert(key, ElementSnapshot::from(element));
+        }
+    }
+
+    /// Record a successful element find with full hierarchy context for fingerprinting.
+    pub fn record_success_with_context(
+        &self,
+        selector: &Selector,
+        element: &Element,
+        hierarchy: &Element,
+    ) {
+        if !self.config.enabled {
+            return;
+        }
+        let key = format!("{selector}");
+        if let Ok(mut known) = self.known_elements.lock() {
+            known.insert(key, ElementSnapshot::with_context(element, hierarchy));
         }
     }
 
@@ -163,7 +270,7 @@ impl SelectorHealer {
         let mut scored: Vec<ScoredCandidate> = candidates
             .into_iter()
             .map(|el| {
-                let score = compute_similarity(selector, snapshot, &el);
+                let score = compute_similarity(selector, snapshot, &el, Some(&hierarchy));
                 ScoredCandidate { element: el, score }
             })
             .filter(|sc| sc.score > 0.0)
@@ -278,10 +385,12 @@ fn flatten_elements(element: &Element, out: &mut Vec<Element>) {
 }
 
 /// Compute a similarity score (0.0–1.0) between a selector/snapshot and a candidate element.
+/// The hierarchy is used for fingerprint context matching.
 fn compute_similarity(
     selector: &Selector,
     snapshot: Option<&ElementSnapshot>,
     candidate: &Element,
+    hierarchy: Option<&Element>,
 ) -> f64 {
     let mut score = 0.0;
     let mut max_score = 0.0;
@@ -317,7 +426,7 @@ fn compute_similarity(
         }
         Selector::Compound(selectors) => {
             for sub_sel in selectors {
-                let sub_score = compute_similarity(sub_sel, None, candidate);
+                let sub_score = compute_similarity(sub_sel, None, candidate, hierarchy);
                 max_score += 1.0;
                 score += sub_score;
             }
@@ -325,7 +434,7 @@ fn compute_similarity(
         Selector::Index {
             selector: inner, ..
         } => {
-            return compute_similarity(inner, snapshot, candidate);
+            return compute_similarity(inner, snapshot, candidate, hierarchy);
         }
     }
 
@@ -352,6 +461,10 @@ fn compute_similarity(
         // Spatial proximity (closer bounds = higher score)
         max_score += 0.3;
         score += spatial_similarity(&snap.bounds, &candidate.bounds) * 0.3;
+
+        // Fingerprint context: parent and sibling matching
+        score += fingerprint_similarity(&snap.fingerprint, candidate, hierarchy) * 0.4;
+        max_score += 0.4;
     }
 
     if max_score == 0.0 {
@@ -404,6 +517,74 @@ fn spatial_similarity(a: &Rect, b: &Rect) -> f64 {
     // Normalize against a reference distance (half screen diagonal ~1000px)
     let max_distance = 1000.0;
     (1.0 - distance / max_distance).max(0.0)
+}
+
+/// Compute fingerprint similarity: how well does the candidate's structural
+/// context (parent, siblings) match the snapshot's recorded context.
+fn fingerprint_similarity(
+    fingerprint: &ElementFingerprint,
+    candidate: &Element,
+    hierarchy: Option<&Element>,
+) -> f64 {
+    let hierarchy = match hierarchy {
+        Some(h) => h,
+        None => return 0.0,
+    };
+
+    let candidate_fp = extract_fingerprint(candidate, hierarchy);
+    let mut score = 0.0;
+    let mut max_score = 0.0;
+
+    // Parent type match
+    if let (Some(ref snap_parent), Some(ref cand_parent)) =
+        (&fingerprint.parent_type, &candidate_fp.parent_type)
+    {
+        max_score += 1.0;
+        if snap_parent == cand_parent {
+            score += 1.0;
+        }
+    }
+
+    // Parent label match
+    if let (Some(ref snap_label), Some(ref cand_label)) =
+        (&fingerprint.parent_label, &candidate_fp.parent_label)
+    {
+        max_score += 0.5;
+        score += string_similarity(snap_label, cand_label) * 0.5;
+    }
+
+    // Sibling types overlap (Jaccard similarity)
+    if !fingerprint.sibling_types.is_empty() || !candidate_fp.sibling_types.is_empty() {
+        max_score += 0.5;
+        let intersection = fingerprint
+            .sibling_types
+            .iter()
+            .filter(|t| candidate_fp.sibling_types.contains(t))
+            .count();
+        let union = {
+            let mut combined = fingerprint.sibling_types.clone();
+            combined.extend(candidate_fp.sibling_types.iter().cloned());
+            combined.sort();
+            combined.dedup();
+            combined.len()
+        };
+        if union > 0 {
+            score += (intersection as f64 / union as f64) * 0.5;
+        }
+    }
+
+    // Type index match (same position among same-type siblings)
+    if let (Some(snap_idx), Some(cand_idx)) = (fingerprint.type_index, candidate_fp.type_index) {
+        max_score += 0.3;
+        if snap_idx == cand_idx {
+            score += 0.3;
+        }
+    }
+
+    if max_score == 0.0 {
+        return 0.0;
+    }
+    score / max_score
 }
 
 /// Simple Levenshtein distance.
@@ -539,7 +720,7 @@ mod tests {
             visible: true,
             children: vec![],
         };
-        let score = compute_similarity(&selector, None, &element);
+        let score = compute_similarity(&selector, None, &element, None);
         assert_eq!(score, 1.0);
     }
 
@@ -561,7 +742,7 @@ mod tests {
             visible: true,
             children: vec![],
         };
-        let score = compute_similarity(&selector, None, &element);
+        let score = compute_similarity(&selector, None, &element, None);
         assert!(score > 0.7, "partial match score was {score}");
     }
 

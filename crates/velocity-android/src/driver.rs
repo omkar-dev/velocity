@@ -303,4 +303,12 @@ impl PlatformDriver for AndroidDriver {
             Ok(false)
         }
     }
+
+    async fn collect_resource_metrics(
+        &self,
+        device_id: &str,
+        package: &str,
+    ) -> Result<(u64, u64, u64, f32)> {
+        self.adb.collect_resource_metrics(device_id, package).await
+    }
 }

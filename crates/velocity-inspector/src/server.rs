@@ -5,7 +5,7 @@ use axum::Router;
 use tower_http::cors::CorsLayer;
 
 use crate::embedded;
-use crate::routes::{actions, devices, hierarchy, screenshot, selector};
+use crate::routes::{actions, devices, headless, hierarchy, recording, screenshot, selector};
 use crate::state::AppState;
 use crate::ws;
 
@@ -20,6 +20,10 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/devices/{id}/swipe", post(actions::swipe))
         .route("/devices/{id}/press-key", post(actions::press_key))
         .route("/selector/generate", post(selector::generate))
+        .route("/flow/save", post(recording::save_flow))
+        .route("/headless/render-tree", get(headless::get_render_tree))
+        .route("/headless/re-render", post(headless::re_render))
+        .route("/headless/status", get(headless::headless_status))
         .route("/ws/{device_id}", get(ws::handler));
 
     Router::new()

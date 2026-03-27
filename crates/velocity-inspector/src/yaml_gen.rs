@@ -21,6 +21,37 @@ pub fn assert_visible_yaml(selector: &Selector) -> String {
     format!("- assertVisible:\n    {}", selector_to_yaml(selector))
 }
 
+/// Generate a complete test YAML file from recorded steps.
+pub fn flow_yaml(name: &str, app_id: &str, step_yamls: &[String]) -> String {
+    let steps_block: String = step_yamls
+        .iter()
+        .map(|y| {
+            y.lines()
+                .map(|line| format!("  {line}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    format!(
+        "name: {}\nappId: {}\n\nsteps:\n{steps_block}\n",
+        yaml_double_quoted(name),
+        yaml_double_quoted(app_id)
+    )
+}
+
+fn yaml_double_quoted(value: &str) -> String {
+    format!(
+        "\"{}\"",
+        value
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"")
+            .replace('\n', "\\n")
+            .replace('\r', "\\r")
+    )
+}
+
 fn selector_to_yaml(selector: &Selector) -> String {
     match selector {
         Selector::Id(id) => format!("id: {id:?}"),

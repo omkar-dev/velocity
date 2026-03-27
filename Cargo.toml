@@ -8,7 +8,10 @@ members = [
     "crates/velocity-runner",
     "crates/velocity-mcp",
     "crates/velocity-migrate",
+    "crates/velocity-headless",
     "crates/velocity-inspector",
+    "crates/velocity-rn-bridge",
+    "crates/velocity-flutter-bridge",
     "velocity-cli",
 ]
 

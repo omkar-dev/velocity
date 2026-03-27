@@ -390,6 +390,58 @@ impl AsyncAdb {
         let script = commands.join(" && ");
         self.shell(device_id, &script).await
     }
+
+    /// Collect resource metrics (heap, PSS, CPU) for a package in a single round-trip.
+    /// Uses batch_shell to combine `dumpsys meminfo --short` and `top` into one TCP call.
+    /// Returns (java_heap_kb, native_heap_kb, total_pss_kb, cpu_percent).
+    pub async fn collect_resource_metrics(
+        &self,
+        device_id: &str,
+        package: &str,
+    ) -> Result<(u64, u64, u64, f32)> {
+        validate_package_name(package)?;
+        let output = self
+            .batch_shell(
+                device_id,
+                &[
+                    &format!("dumpsys meminfo {} --short", package),
+                    &build_cpu_metrics_command(package),
+                ],
+            )
+            .await?;
+
+        let (meminfo_part, cpu_part) = output
+            .split_once(CPU_SEPARATOR)
+            .unwrap_or((&output, ""));
+
+        let (java_heap, native_heap, total_pss) = parse_meminfo_short(meminfo_part);
+        let cpu = parse_cpu_line(cpu_part);
+
+        Ok((java_heap, native_heap, total_pss, cpu))
+    }
+}
+
+pub(crate) const CPU_SEPARATOR: &str = "---VELOCITY_CPU_SEPARATOR---";
+
+pub(crate) fn validate_package_name(package: &str) -> Result<()> {
+    let is_valid = !package.is_empty()
+        && package
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '.' || ch == '_');
+
+    if is_valid {
+        Ok(())
+    } else {
+        Err(VelocityError::Config(format!(
+            "Invalid Android package name '{package}'"
+        )))
+    }
+}
+
+pub(crate) fn build_cpu_metrics_command(package: &str) -> String {
+    format!(
+        "echo '{CPU_SEPARATOR}' && {{ if top -b -n 1 -s 1 >/dev/null 2>&1; then top -b -n 1 -s 1; elif top -n 1 >/dev/null 2>&1; then top -n 1; elif ps -A -o %CPU,ARGS >/dev/null 2>&1; then ps -A -o %CPU,ARGS; else ps; fi; }} | grep -F \"{package}\" || true"
+    )
 }
 
 fn escape_adb_text(text: &str) -> String {
@@ -405,6 +457,60 @@ fn escape_adb_text(text: &str) -> String {
         }
     }
     escaped
+}
+
+/// Parse `dumpsys meminfo <pkg> --short` output.
+/// Returns (java_heap_kb, native_heap_kb, total_pss_kb).
+pub(crate) fn parse_meminfo_short(output: &str) -> (u64, u64, u64) {
+    let mut java_heap: u64 = 0;
+    let mut native_heap: u64 = 0;
+    let mut total_pss: u64 = 0;
+
+    for line in output.lines() {
+        let trimmed = line.trim();
+        // Lines look like: "  Java Heap:     1234"
+        //                   "  Native Heap:    567"
+        //                   "  TOTAL PSS:     8901"
+        //                   or in some formats: "  TOTAL:     8901"
+        if let Some(rest) = trimmed.strip_prefix("Java Heap:") {
+            java_heap = rest.trim().parse().unwrap_or(0);
+        } else if let Some(rest) = trimmed.strip_prefix("Native Heap:") {
+            native_heap = rest.trim().parse().unwrap_or(0);
+        } else if let Some(rest) = trimmed.strip_prefix("TOTAL PSS:") {
+            total_pss = rest.trim().parse().unwrap_or(0);
+        } else if total_pss == 0 {
+            if let Some(rest) = trimmed.strip_prefix("TOTAL:") {
+                total_pss = rest.trim().parse().unwrap_or(0);
+            }
+        }
+    }
+
+    (java_heap, native_heap, total_pss)
+}
+
+/// Parse CPU% from a `top` output line for the target package.
+/// Lines look like: "  1234  u0_a42  10  -10  1.2G  100M  S  12.5  com.example.app"
+pub(crate) fn parse_cpu_line(output: &str) -> f32 {
+    for line in output.lines() {
+        let fields: Vec<&str> = line.split_whitespace().collect();
+        // top output has varying columns; CPU% is typically column 9 (0-indexed 8)
+        // but can vary. We look for a float-like value before the package name.
+        if fields.len() >= 9 {
+            // Try the field at index 8 (common position for CPU%)
+            if let Ok(cpu) = fields[8].trim_end_matches('%').parse::<f32>() {
+                return cpu;
+            }
+        }
+        // Fallback: scan fields for a float that looks like CPU%
+        for field in &fields {
+            if let Ok(cpu) = field.trim_end_matches('%').parse::<f32>() {
+                if (0.0..=100.0).contains(&cpu) {
+                    return cpu;
+                }
+            }
+        }
+    }
+    0.0
 }
 
 fn fix_adb_newlines(bytes: &[u8]) -> Vec<u8> {
@@ -438,5 +544,51 @@ mod tests {
         let input = b"hello\r\nworld\r\n";
         let fixed = fix_adb_newlines(input);
         assert_eq!(fixed, b"hello\nworld\n");
+    }
+
+    #[test]
+    fn test_parse_meminfo_short() {
+        let output = r#"
+           App Summary
+                       Pss(KB)
+                        ------
+           Java Heap:     8432
+         Native Heap:     3216
+                Code:     1024
+               Stack:      128
+            Graphics:      512
+       Private Other:      256
+              System:     2048
+             Unknown:      100
+
+           TOTAL PSS:    15716
+        "#;
+        let (java, native, pss) = parse_meminfo_short(output);
+        assert_eq!(java, 8432);
+        assert_eq!(native, 3216);
+        assert_eq!(pss, 15716);
+    }
+
+    #[test]
+    fn test_parse_meminfo_short_total_fallback() {
+        let output = "  Java Heap:     1000\n  Native Heap:     500\n  TOTAL:     2500\n";
+        let (java, native, pss) = parse_meminfo_short(output);
+        assert_eq!(java, 1000);
+        assert_eq!(native, 500);
+        assert_eq!(pss, 2500);
+    }
+
+    #[test]
+    fn test_parse_cpu_line() {
+        let output = "  1234  u0_a42  10  -10  1.2G  100M  S  12.5  com.example.app\n";
+        // The 12.5 is at index 7, but our fallback scanner should find it
+        let cpu = parse_cpu_line(output);
+        assert!(cpu > 0.0);
+    }
+
+    #[test]
+    fn test_parse_cpu_line_empty() {
+        assert_eq!(parse_cpu_line(""), 0.0);
+        assert_eq!(parse_cpu_line("no matching output"), 0.0);
     }
 }

@@ -36,6 +36,33 @@ impl Adb {
         self.run(device_id, &["shell", &script]).await
     }
 
+    pub async fn collect_resource_metrics(
+        &self,
+        device_id: &str,
+        package: &str,
+    ) -> Result<(u64, u64, u64, f32)> {
+        crate::async_adb::validate_package_name(package)?;
+        let output = self
+            .batch_shell(
+                device_id,
+                &[
+                    &format!("dumpsys meminfo {} --short", package),
+                    &crate::async_adb::build_cpu_metrics_command(package),
+                ],
+            )
+            .await?;
+
+        let (meminfo_part, cpu_part) = output
+            .split_once(crate::async_adb::CPU_SEPARATOR)
+            .unwrap_or((&output, ""));
+
+        let (java_heap, native_heap, total_pss) =
+            crate::async_adb::parse_meminfo_short(meminfo_part);
+        let cpu = crate::async_adb::parse_cpu_line(cpu_part);
+
+        Ok((java_heap, native_heap, total_pss, cpu))
+    }
+
     async fn run(&self, device_id: &str, args: &[&str]) -> Result<String> {
         let mut cmd = Command::new(&self.adb_path);
         cmd.arg("-s").arg(device_id);

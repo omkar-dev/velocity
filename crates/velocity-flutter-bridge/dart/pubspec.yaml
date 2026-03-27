@@ -1,0 +1,16 @@
+name: velocity_flutter_helper
+description: Velocity headless test helper — bridges Flutter WidgetTester to Velocity's Rust bridge
+version: 0.1.0
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+
+dev_dependencies:
+  test: any

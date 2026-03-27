@@ -2,7 +2,10 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-use velocity_common::{Element, PlatformDriver, Result, Selector, VelocityError};
+use tracing::info;
+use velocity_common::{Element, HealingConfig, PlatformDriver, Result, Selector, VelocityError};
+
+use crate::healing::SelectorHealer;
 
 const MAX_CACHE_SIZE: usize = 256;
 const DEFAULT_TTL: Duration = Duration::from_secs(30);
@@ -12,6 +15,7 @@ pub struct SelectorEngine {
     generation: AtomicU64,
     max_size: usize,
     ttl: Duration,
+    healer: SelectorHealer,
 }
 
 #[derive(Clone)]
@@ -23,11 +27,22 @@ struct CachedElement {
 
 impl SelectorEngine {
     pub fn new() -> Self {
+        Self::with_healing(HealingConfig::default())
+    }
+
+    pub fn with_healing(config: HealingConfig) -> Self {
+        let healer_config = crate::healing::HealingConfig {
+            enabled: config.enabled,
+            confidence_threshold: config.confidence_threshold,
+            persist_healed: config.persist_healed,
+            persist_path: None,
+        };
         Self {
             cache: HashMap::with_capacity(64),
             generation: AtomicU64::new(0),
             max_size: MAX_CACHE_SIZE,
             ttl: DEFAULT_TTL,
+            healer: SelectorHealer::new(healer_config),
         }
     }
 
@@ -72,31 +87,63 @@ impl SelectorEngine {
         }
 
         // Full tree query
-        let element = driver
-            .find_element(device_id, selector)
-            .await
-            .map_err(|_| VelocityError::ElementNotFound {
-                selector: format!("{selector}"),
-                timeout_ms: 0,
-                screenshot: None,
-                hierarchy_snapshot: None,
-            })?;
+        let result = driver.find_element(device_id, selector).await;
 
-        // Evict oldest entries if cache is full
+        match result {
+            Ok(element) => {
+                // Record successful find for future healing reference
+                self.healer.record_success(selector, &element);
+                self.cache_element(&cache_key, element.clone(), current_gen);
+                Ok(element)
+            }
+            Err(_) => {
+                // Primary lookup failed — attempt self-healing
+                if let Some((healed_element, confidence)) =
+                    self.healer.try_heal(driver, device_id, selector).await
+                {
+                    info!(
+                        selector = %selector,
+                        confidence = confidence,
+                        healed_type = healed_element.element_type,
+                        healed_label = healed_element.label.as_deref().unwrap_or(""),
+                        "selector healed: using alternate element"
+                    );
+                    self.cache_element(&cache_key, healed_element.clone(), current_gen);
+                    Ok(healed_element)
+                } else {
+                    Err(VelocityError::ElementNotFound {
+                        selector: format!("{selector}"),
+                        timeout_ms: 0,
+                        screenshot: None,
+                        hierarchy_snapshot: None,
+                    })
+                }
+            }
+        }
+    }
+
+    /// Persist any healed mappings to disk (call at end of test run).
+    pub fn persist_healed_mappings(&self) -> Result<()> {
+        self.healer.persist()
+    }
+
+    /// Get access to the healer for reporting.
+    pub fn healer(&self) -> &SelectorHealer {
+        &self.healer
+    }
+
+    fn cache_element(&mut self, cache_key: &str, element: Element, current_gen: u64) {
         if self.cache.len() >= self.max_size {
             self.evict_oldest();
         }
-
         self.cache.insert(
-            cache_key,
+            cache_key.to_string(),
             CachedElement {
-                element: element.clone(),
+                element,
                 cached_at: Instant::now(),
                 source_generation: current_gen,
             },
         );
-
-        Ok(element)
     }
 
     fn is_valid(&self, cached: &CachedElement, current_gen: u64) -> bool {

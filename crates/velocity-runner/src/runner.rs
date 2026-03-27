@@ -68,7 +68,8 @@ impl SuiteRunner {
         );
         println!();
 
-        let mut executor = TestExecutor::new(driver, suite.config.clone());
+        let mut executor = TestExecutor::new(driver, suite.config.clone(), &app_id);
+        let mut hist = history::load(&config.artifacts_dir).unwrap_or_default();
         let mut results: Vec<TestResult> = Vec::with_capacity(total_tests);
 
         for test in &tests {
@@ -105,6 +106,19 @@ impl SuiteRunner {
                 }
             }
 
+            // Check for resource regression if profiling is enabled
+            if let Some(ref peak) = result.resource_peak {
+                if let Some(baseline) = hist.resource_baselines.get(&test.name) {
+                    if let Some(warning) = history::check_regression(
+                        baseline,
+                        peak,
+                        suite.config.performance.heap_growth_threshold_pct,
+                    ) {
+                        println!("    \x1b[33m⚠ {warning}\x1b[0m");
+                    }
+                }
+            }
+
             let failed = result.status == TestStatus::Failed;
             results.push(result);
 
@@ -118,6 +132,7 @@ impl SuiteRunner {
                         retries: 0,
                         error_message: Some("Skipped due to --fail-fast".to_string()),
                         screenshots: vec![],
+                        resource_peak: None,
                     });
                 }
                 break;
@@ -143,7 +158,6 @@ impl SuiteRunner {
             .count();
 
         // Update history
-        let mut hist = history::load(&config.artifacts_dir).unwrap_or_default();
         history::update(&mut hist, &results);
         let _ = history::save(&config.artifacts_dir, &hist);
 
@@ -191,6 +205,7 @@ async fn run_test_with_retries(
             retries: 0,
             error_message: Some(e.to_string()),
             screenshots: vec![],
+            resource_peak: None,
         },
     };
 
@@ -207,6 +222,7 @@ async fn run_test_with_retries(
                 retries: attempts,
                 error_message: Some(e.to_string()),
                 screenshots: vec![],
+                resource_peak: None,
             },
         };
     }

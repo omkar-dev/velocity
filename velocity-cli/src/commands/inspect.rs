@@ -20,6 +20,10 @@ pub struct InspectArgs {
     /// Target device ID (auto-detects if omitted)
     #[arg(short, long)]
     device: Option<String>,
+
+    /// App identifier/package name for performance profiling in the inspector
+    #[arg(long)]
+    app_id: Option<String>,
 }
 
 pub async fn execute(args: InspectArgs) -> anyhow::Result<i32> {
@@ -75,7 +79,7 @@ pub async fn execute(args: InspectArgs) -> anyhow::Result<i32> {
     );
 
     let driver_arc: Arc<dyn velocity_common::PlatformDriver> = Arc::from(driver);
-    let server = InspectorServer::new(driver_arc, device_id);
+    let server = InspectorServer::new(driver_arc, device_id, args.app_id);
     server.start(args.port).await?;
 
     Ok(0)
